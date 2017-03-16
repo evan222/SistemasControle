@@ -1,0 +1,247 @@
+#:kivy 1.0.9
+
+Interface:
+	#amplitude: amplitude
+	BoxLayout:
+		orientation: "horizontal"
+	#BOTOES
+		BoxLayout:
+			size_hint: [.5,1]
+			orientation: "vertical"
+			
+			BoxLayout:
+				size_hint: [1,.8]
+				orientation: "vertical"
+				BoxLayout:
+					size_hint: [1,1]
+					orientation: "horizontal"
+					ToggleButton:
+						id: ma
+						group: 'malha'
+						state: 'down'
+						background_normal: 'ondaup.png'
+						background_down: 'ondadown.png'
+						text: "Malha Aberta"
+						on_press: root.MA()
+					ToggleButton:
+						id: mf #botaoquadrada
+						group: 'malha'
+						background_normal: 'ondaup.png'
+						background_down: 'ondadown.png'
+						text: "Malha Fechada"
+						on_press: root.MF()
+						
+			BoxLayout:
+				size_hint: [1,1.2]
+				orientation: "vertical"
+				ToggleButton:
+					id: bd
+					group: 'onda'
+					state: 'down'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "Onda Degrau"
+					on_press: root.degrau()
+				ToggleButton:
+					id: bq #botaoquadrada
+					group: 'onda'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "Onda Quadrada"
+					on_press: root.quadrada()
+				ToggleButton:
+					id: bs
+					group: 'onda'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "Onda Senoidal"
+					on_press: root.senoide()		
+				ToggleButton:
+					id: bds
+					group: 'onda'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "Onda Dente Serra"
+					on_press: root.denteserra()
+				ToggleButton:
+					id: ba 
+					group: 'onda'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "Onda Aleatória"
+					on_press: root.aleatoria()
+			
+			BoxLayout:
+				size_hint: [1,2]
+				orientation: "horizontal"
+				GridLayout:
+					rows: 5
+					cols: 1
+					Label:
+						id: tensaomin
+						text: "Tensao Minima"
+					Label:
+						id: tensaomax
+						text: "Tensao Maxima"
+					Label:
+						id: tensaoentrada
+						text: "Tensao/cm de entrada (MF)"
+					Label:
+						id: offset
+						text: "Offset"
+					Label:
+						id: periodo
+						text: "Periodo"
+				GridLayout:
+					rows: 5
+					cols: 3
+					TextInput: 
+						id: tensaomin
+						multiline: False
+						#input_filter: 'string'
+						text: '0'
+						on_text: root.tensao_min(tensaomin.text)
+					Label:
+						id: kp
+						text: "KP"
+					TextInput: 
+						id: kp
+						multiline: False
+						text: '0'
+						
+					TextInput: 
+						id: tensaomax
+						multiline: False
+						#input_filter: 'float'
+						text: '0'
+						on_text: root.tensao_max(tensaomax.text)
+					Label:
+						id: ki
+						text: "KI"
+					TextInput: 
+						id: ki
+						multiline: False
+						text: '0'
+						
+					TextInput: 
+						id: tensaoentrada
+						multiline: False
+						#input_filter: 'float'
+						text: '0'
+						on_text: root.tensaoentrada(tensaoentrada.text)	
+					Label:
+						id: kd
+						text: "KD"
+					TextInput: 
+						id: kd
+						multiline: False
+						text: '0'
+						
+					TextInput: 
+						id: offset
+						multiline: False
+						#input_filter: 'float'
+						text: '0'
+						on_text: root.offset(offset.text)
+					Label:
+						id: taui
+						text: "Ti"
+					TextInput: 
+						id: taui
+						multiline: False
+						text: '0'
+						
+					TextInput: 
+						id: periodo
+						multiline: False
+						#input_filter: 'float'
+						text: '0'
+						on_text: root.periodo(periodo.text)	
+					
+					Label:
+						id: taud
+						text: "Td"
+					TextInput: 
+						id: taup
+						multiline: False
+						text: '0'					
+					
+					
+					
+			BoxLayout:
+				size_hint: [1,1]
+				orientation: "horizontal"
+				Button:
+					id: start
+					background_normal: 'startup.png'
+					background_down: 'startdown.png'
+					border: 10,10,10,10
+					text: "Start"
+					on_press: root.startsaida()
+				Button:
+					id: stop
+					background_normal: 'stopup.png'
+					background_down: 'stopdown.png'
+					border: 30,30,30,30
+					text: "Stop"
+					on_press: root.stop()	
+		
+		#Graficos
+		
+		
+		BoxLayout:
+			canvas.before:
+				Color:
+					rgba: 1, 1, 1, 1
+				Rectangle:
+					pos: self.pos
+					size: self.size
+			size_hint: [.5,1]
+			orientation: "vertical"
+			BoxLayout:
+				size_hint: [1,.1]
+				orientation: "vertical"
+				Label:
+					id:malha
+					bold: True
+					color: 0,0,0,1.0
+					text: 'Malha Aberta'
+			Graph:
+				id:graphsaida
+				xlabel:"Tempo"
+				ylabel:"Tensao Saida"
+				xmin: 0
+				xmax: 100
+				ymin: -5
+				ymax: 5
+				y_ticks_minor: 2
+				y_ticks_major: 2
+				y_grid: True
+				y_grid_label: True
+				tick_color: 0,0,0,1.0
+				border_color: 0,0,0,1.0
+				mesh_rect_color: 0,0,0,1.0
+				label_options:{'color': (0,0,0,1)}
+				
+			Graph:
+				id:graphentrada
+				xlabel:"Tempo"
+				ylabel:"Tensao Entrada"
+				xmin: 0
+				xmax: 100
+				ymin: -5
+				ymax: 5
+				y_ticks_minor: 2
+				y_ticks_major: 2
+				y_grid: True
+				y_grid_label: True
+				tick_color: 0,0,0,1.0
+				border_color: 0,0,0,1.0
+				mesh_rect_color: 0,0,0,1.0
+				label_options:{'color': (0,0,0,1)}
+		
+		
+				
+
+				
+
