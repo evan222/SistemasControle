@@ -16,6 +16,7 @@ from kivy.uix.switch import Switch
 
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
+from kivy.uix.image import Image
 
 #para o grafico:
 from math import sin
@@ -47,26 +48,37 @@ flag_pid=2 -> controle PI
 flag_pid=3 -> controle PID
 flag_pid=4 -> controle PI-D
 """
+flag_modo=0
+##flag_modo = 0 -> Ki e Kd
+##flag_modo = 1 -> taui e taud
 
-valor_entrada = 5
+
+valor_entrada = 0
 periodo = 1
 offset = 0
 tensao_max = 4
 tensao_min = -4
 
-P_value=0
-I_value=0
-D_value=0
-Derivator=0
-Integrator=0
+#Variaveis do controlador PID
+Derivator=0.0
+Integrator=0.0
 Integrator_max=500
 Integrator_min=-500
+
+#Constantes do Controlador PID
+taud=0.0
+taui=0.0
+Kd=0.0
+Kp=0.0
+Ki=0.0
+PID=0.0
 
 ##variaveis de controle da interface/sistema
 Start = False
 lista_saida = [(0,0)]
 lista_entrada = [(0,0)]
 lista_setpoint = [(0,0)]
+lista_altura = [(0,0)]
 
 cont = 0
 
@@ -77,11 +89,7 @@ def readSensor(channel):
  
 def getAltura(channel):
     tensao = readSensor(channel)
-    return tensao*6.25
- 
-def getTensao(amp):
-    tensao = amp/6.25
-    return tensao
+    return float(tensao*6.25)
 
 def startConnection(IP, porta):
     global conn
@@ -121,25 +129,24 @@ def writeTensao(channel, volts):
 
 ##Calculo das variaveis de controle PID:
 def calculaTauD(Kp,Kd):
-    return  float(Kd/Kp)
+    return  float(Kd)/float(Kp)
 def calculaKD(taud,Kp):
-    return float(taud*Kp)
+    return float(taud)*float(Kp)
 def calculaTauI(Kp,Ki):
-    return  float(Kp/Ki)
+    return  float(Kp)/float(Ki)
 def calculaKI(taui,Ki):
-    return float(Kp/taui)
+    return float(Kp)/float(taui)
 
 ##Calculo controle PID:
-def controlePID(set_point,current_value,Kp,Kd,Ki):
+def controlePID_K(set_point,current_value,Kp,Kd,Ki):
     #Declaracoes das variaveis globais
-    global P_value, I_value, D_value, Derivator, Integrator, Integrator_max, Integrator_min, flag_pid
+    global Derivator, Integrator, Integrator_max, Integrator_min, flag_pid,PID
     h=0.1
-    PID = 0
 
     error = set_point - current_value
 
     if(flag_pid==0 or flag_pid==1):
-        Integrator = 0
+        Integrator=0
     if(flag_pid==0 or flag_pid==2):
         Derivator=0
     if(flag_pid==0 or flag_pid==1 or flag_pid==2 or flag_pid==3 or flag_pid==4):
@@ -154,7 +161,41 @@ def controlePID(set_point,current_value,Kp,Kd,Ki):
         Derivator = current_value
         PID = PID + D_value
     if(flag_pid==2 or flag_pid==3 or flag_pid==4):
-        Integrator = Integrator + (ki*error*h)
+        Integrator = Integrator + (Ki*error*h)
+        if Integrator > Integrator_max:
+            Integrator = Integrator_max
+        elif Integrator < Integrator_min:
+            Integrator = Integrator_min
+        I_value = Integrator
+        PID = PID + I_value
+    return PID
+
+def controlePID_TAU(set_point,current_value,Kp,Td,Ti):
+    #Declaracoes das variaveis globais
+    global Integrator_max, Integrator_min, flag_pid, PID
+    h=0.1
+
+    error = set_point - current_value
+
+    if(flag_pid==0 or flag_pid==1):
+        Integrator=0
+        I_value=0
+    if(flag_pid==0 or flag_pid==2):
+        Derivator=0
+        D_value=0
+    if(flag_pid==0 or flag_pid==1 or flag_pid==2 or flag_pid==3 or flag_pid==4):
+        P_value = Kp*error
+        PID = PID + P_value
+    if(flag_pid==1 or flag_pid==3):
+        D_value = Kp*Td*((error - Derivator)/h)
+        Derivator = error
+        PID = PID + D_value
+    if(flag_pid==4):
+        D_value = Kp*Td*((current_value - Derivator)/h)
+        Derivator = current_value
+        PID = PID + D_value
+    if(flag_pid==2 or flag_pid==3 or flag_pid==4):
+        Integrator = Integrator + ((Kp/Ti)*error*h)
         if Integrator > Integrator_max:
             Integrator = Integrator_max
         elif Integrator < Integrator_min:
@@ -170,14 +211,18 @@ class Controle(threading.Thread):
 	def __int__(self):
 		self._stop = threading.Event()
 		threading.Thread.__init__(self)
-	def run(self):
-		tensao = 0
+
+	def run(self):	
+		global lista_saida, lista_entrada, lista_setpoint, cont, Start
+		global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd,taud, taui, flag_modo,PID
+		
+		tensao = 0.0
 		channel = 0
-		read = 0
+		read = 0.0
 		t_init = time.time()
-		global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, Start, lista_saida, lista_entrada, cont
-		global flag_pid, Kp, Ki, Kd
-        ##planta:
+		PID=0.0
+
+		##planta:
 		#startConnection('10.13.99.69',20081)
 		##servidor:
 		startConnection('localhost',20074)
@@ -199,34 +244,42 @@ class Controle(threading.Thread):
 				print "Tensao: ", v
 				lista_saida.append((t, v))
 				read = readSensor(channel)
-				print "Sensor: ", read
 				lista_entrada.append((t, read))
-				print "Altura: ", getAltura(read)
-				lista_setpoint.append((t, valor_entrada))
+				altura = getAltura(read)
+				lista_altura.append((t, altura))
+				print "Sensor: ", read
+				print "Altura: ", altura
+				lista_setpoint.append((t, volts))
 				cont = t
 			elif(flag_malha == 1):
-				amp_volts =  getTensao(valor_entrada)
 				if(flag_signal == 1):
-					volts = Signal.waveStep(amp_volts,offset)
+					volts = Signal.waveStep(valor_entrada,offset)
 				elif(flag_signal == 2):
-					volts = Signal.waveSine(amp_volts,periodo,offset,t)
+					volts = Signal.waveSine(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 3):
-					volts = Signal.waveSquare(amp_volts,periodo,offset,t)
+					volts = Signal.waveSquare(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 4):
-					volts = Signal.waveSawtooth(amp_volts,periodo,offset,t)
+					volts = Signal.waveSawtooth(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 5):
-					volts = Signal.waveRandom(amp_volts,periodo,offset,t)
-				saida = controlePID(valor_entrada,volts,Kp,Kd,Ki)
+					volts = Signal.waveRandom(valor_entrada,periodo,offset,t)
+				altura = getAltura(channel)
+				if flag_modo==0:
+				    saida = controlePID_K(volts,altura,Kp,Kd,Ki)
+				elif flag_modo==1:
+				    saida = controlePID_TAU(volts,altura,Kp,taud,taui)
 				tensao = writeTensao(channel, saida)
 				v =  quanser.getTension()
 				print "Tensao: ", v
 				lista_saida.append((t, v))
 				read = readSensor(channel)
 				lista_entrada.append((t, read))
+				altura = getAltura(read)
+				lista_altura.append((t, altura))
 				print "Sensor: ", read
-				print "Altura: ", getAltura(read)
-				lista_setpoint.append((t, valor_entrada))
+				print "Altura: ", altura
+				lista_setpoint.append((t, volts))
 				cont = t
+			time.sleep(0.01)
 		endConnection(channel)
 		sys.exit()
 
@@ -243,7 +296,8 @@ class Interface(BoxLayout):
         self.plotentrada = MeshLinePlot(color=[1,0,0,1])
         self.plotsetpoint = MeshLinePlot(color=[0,0,1,1])
         self.plotsetpoint2 = MeshLinePlot(color=[0,0,1,1])
-        #graph = Graph(xlabel='X', ylabel='Y', x_ticks_minor=5,x_ticks_major=25, y_ticks_major=1, y_grid_label=True, x_grid_label=True, padding=5, x_grid=True, y_grid=True, xmin=-0, xmax=100, ymin=-1, ymax=1)
+        self.plotaltura = MeshLinePlot(color=[0,128,0,1])
+        	#graph = Graph(xlabel='X', ylabel='Y', x_ticks_minor=5,x_ticks_major=25, y_ticks_major=1, y_grid_label=True, x_grid_label=True, 		#padding=5, x_grid=True, y_grid=True, xmin=-0, xmax=100, ymin=-1, ymax=1)
 
         
 ##FUNCOES DOS BOTOES:
@@ -319,34 +373,102 @@ class Interface(BoxLayout):
         self.ids.kd.disabled = False
         flag_pid = 4
 
-'''
-    def kp_in(self, value):
-        global Kp
-        kp = float(value)
-    def kd_in(self, value):
-        global Kp, Kd
-        kp = float(value)
-    def ki_in(self, value):
-        global Kp, Ki
-        kp = float(value)
-    def taud_in(self, value):
-        global taud
-        kp = float(value)
-    def taui_in(self, value):
-        global taui
-        kp = float(value)
-'''
 
-'''
-def calculaTauD(Kp,Kd):
-    return  float(Kd/Kp)
-def calculaKD(taud,Kp):
-    return float(taud*Kp)
-def calculaTauI(Kp,Ki):
-    return  float(Kp/Ki)
-def calculaKI(taui,Ki):
-    return float(Kp/taui)        
-'''
+    def kp_in(self, value):
+        global Kp, Ki, Kd, taui, taud
+        try:
+            Kp = float(value)
+        except:
+            Kp = 0.0
+        try:
+            taui = calculaTauI(Kp, Ki)
+            taud = calculaTauD(Kp, Kd)
+            self.ids.taui.text = str(taui)
+            self.ids.taud.text = str(taud)
+        except:
+            pass
+    def kd_in(self, value):
+        global  Kp, Kd, taud, flag_modo
+        try:
+            Kd = float(value)
+        except:
+            Kd = 0.0
+            flag_modo = 0
+        try:
+            taud = calculaTauD(Kp, Kd)
+            self.ids.taud.text = str(taud)
+        except:
+            self.ids.taud.text = "0.0"
+    def ki_in(self, value):
+        global Kp, taui, Ki, flag_modo
+        try:
+            Ki = float(value)
+        except:
+            Ki = 0.0
+            flag_modo = 0
+        try:
+            taui = calculaTauI(Kp, Ki)
+            self.ids.taui.text = str(taui)
+        except:
+            self.ids.taui.text = "0.0"
+    def taud_in(self, value):
+        global Kp, Kd, taud, flag_modo
+        try:
+            taud = float(value)
+        except:
+            taud = 0.0
+            flag_modo = 1
+        try:
+            Kd = calculaKD(taud, Kp)
+            self.ids.kd.text = str(Kd)
+        except:
+            self.ids.kd.text = "0.0"
+    def taui_in(self, value):
+        global Kp, Ki, taui, flag_modo
+        try:
+            taui = float(value)
+        except:
+            taui = 0.0
+            flag_modo = 1
+        try:
+            Ki = calculaKI(taui, Kp)
+            self.ids.ki.text = str(Ki)
+        except:
+            self.ids.ki.text = "0.0"
+
+
+    def pressKD(self):
+        global flag_modo
+        flag_modo = 0
+        self.ids.kd.disabled = False
+        self.ids.taud.disabled = True
+    def pressKI(self):
+        global flag_modo
+        flag_modo = 0
+        self.ids.ki.disabled = False
+        self.ids.taui.disabled = True
+    def pressTD(self):
+        global flag_modo
+        flag_modo = 0
+        self.ids.kd.disabled = True
+        self.ids.taud.disabled = False
+    def pressTI(self):
+        global flag_modo
+        flag_modo = 0
+        self.ids.ki.disabled = True
+        self.ids.taui.disabled = False
+
+
+
+##def calculaTauD(Kp,Kd):
+##    return  float(Kd/Kp)
+##def calculaKD(taud,Kp):
+##    return float(taud*Kp)
+##def calculaTauI(Kp,Ki):
+##    return  float(Kp/Ki)
+##def calculaKI(taui,Ki):
+##    return float(Kp/taui)        
+
 
 ##FUNCOES PARA CONTROLE DA INTERFACE E CHAMADA DO PROGRAMA DE CONTROLE:
 
@@ -359,6 +481,7 @@ def calculaKI(taui,Ki):
         self.ids.graphsaida.add_plot(self.plotsetpoint)
         self.ids.graphentrada.add_plot(self.plotentrada)
         self.ids.graphentrada.add_plot(self.plotsetpoint2)
+        self.ids.graphentrada.add_plot(self.plotaltura)
         self.clockSaida = Clock.schedule_interval(self.get_valuesaida,0.001)
         self.clockEntrada = Clock.schedule_interval(self.get_valueentrada,0.001)
         Clock.schedule_interval(self.update_xaxis, 0.001)
@@ -381,10 +504,11 @@ def calculaKI(taui,Ki):
     def get_valueentrada(self, dt):
         self.plotentrada.points = [i for i in lista_entrada]
         self.plotsetpoint2.points = [i for i in lista_setpoint]
+        self.plotaltura.points = [i for i in lista_altura]
 
 
     def stop(self):
-        global Start, lista_entrada, lista_saida, lista_setpoint
+        global Start, lista_entrada, lista_saida, lista_setpoint, lista_altura
         self.clockSaida.cancel()
         self.clockEntrada.cancel()
         Start = False
@@ -392,14 +516,17 @@ def calculaKI(taui,Ki):
         self.ids.graphentrada.remove_plot(self.plotentrada)
         self.ids.graphsaida.remove_plot(self.plotsetpoint)
         self.ids.graphentrada.remove_plot(self.plotsetpoint2)
+        self.ids.graphsaida.remove_plot(self.plotaltura)
         self.ids.graphsaida._clear_buffer()
         self.ids.graphentrada._clear_buffer()
         while len(lista_entrada) > 0 : lista_entrada.pop()
         while len(lista_saida) > 0 : lista_saida.pop()
         while len(lista_setpoint) > 0 : lista_setpoint.pop()
+        while len(lista_altura) > 0 : lista_altura.pop()
         lista_entrada = [(0,0)]
         lista_saida = [(0,0)]
         lista_setpoint = [(0,0)]
+        lista_altura = [(0,0)]
 
 
 ##-----------------------------------------------------------------------------
@@ -411,4 +538,4 @@ class ControleApp(App):
 
 
 if __name__ == '__main__':
-    ControleApp().run()
+	ControleApp().run()
