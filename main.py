@@ -81,6 +81,7 @@ lista_setpoint = [(0,0)]
 lista_altura = [(0,0)]
 
 cont = 0
+nivel_tanque = 0
 
 ##-------------------------------------------
 def readSensor(channel):
@@ -213,7 +214,7 @@ class Controle(threading.Thread):
 		threading.Thread.__init__(self)
 
 	def run(self):	
-		global lista_saida, lista_entrada, lista_setpoint, cont, Start
+		global lista_saida, lista_entrada, lista_setpoint, cont, Start, nivel_tanque
 		global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd,taud, taui, flag_modo,PID
 		
 		tensao = 0.0
@@ -223,9 +224,9 @@ class Controle(threading.Thread):
 		PID=0.0
 
 		##planta:
-		#startConnection('10.13.99.69',20081)
+		startConnection('10.13.99.69',20081)
 		##servidor:
-		startConnection('localhost',20074)
+		##startConnection('localhost',20074)
 		while(Start):
 			t = time.time() - t_init
 			if(flag_malha == 0):
@@ -241,14 +242,15 @@ class Controle(threading.Thread):
 					volts = Signal.waveRandom(valor_entrada,periodo,offset,t)
 				tensao = writeTensao(channel, volts)
 				v =  quanser.getTension()
-				print "Tensao: ", v
+				#print "Tensao: ", v
 				lista_saida.append((t, v))
 				read = readSensor(channel)
 				lista_entrada.append((t, read))
-				altura = getAltura(read)
+				#altura = getAltura(read)
 				lista_altura.append((t, altura))
-				print "Sensor: ", read
-				print "Altura: ", altura
+				#print "Sensor: ", read
+				#print "Altura: ", altura
+				#nivel_tanque = altura
 				lista_setpoint.append((t, volts))
 				cont = t
 			elif(flag_malha == 1):
@@ -269,17 +271,18 @@ class Controle(threading.Thread):
 				    saida = controlePID_TAU(volts,altura,Kp,taud,taui)
 				tensao = writeTensao(channel, saida)
 				v =  quanser.getTension()
-				print "Tensao: ", v
+				#print "Tensao: ", v
 				lista_saida.append((t, v))
 				read = readSensor(channel)
 				lista_entrada.append((t, read))
-				altura = getAltura(read)
+				#altura = getAltura(read)
 				lista_altura.append((t, altura))
-				print "Sensor: ", read
-				print "Altura: ", altura
+				#print "Sensor: ", read
+				#print "Altura: ", altura
+				#nivel_tanque = altura
 				lista_setpoint.append((t, volts))
 				cont = t
-			time.sleep(0.01)
+			#time.sleep(0.01)
 		endConnection(channel)
 		sys.exit()
 
@@ -355,22 +358,32 @@ class Interface(BoxLayout):
     def do_p(self):
         self.ids.ki.disabled = True
         self.ids.kd.disabled = True
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
         flag_pid = 0
     def do_pd(self):
         self.ids.ki.disabled = True
         self.ids.kd.disabled = False
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
         flag_pid = 1
     def do_pi(self):
         self.ids.ki.disabled = False
         self.ids.kd.disabled = True
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
         flag_pid = 2
     def do_pid(self):
         self.ids.ki.disabled = False
         self.ids.kd.disabled = False
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
         flag_pid = 3
     def do_pi_d(self):
         self.ids.ki.disabled = False
         self.ids.kd.disabled = False
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
         flag_pid = 4
 
 
@@ -505,6 +518,7 @@ class Interface(BoxLayout):
         self.plotentrada.points = [i for i in lista_entrada]
         self.plotsetpoint2.points = [i for i in lista_setpoint]
         self.plotaltura.points = [i for i in lista_altura]
+        #self.ids.tanque.size_hint = (0.2, 1)
 
 
     def stop(self):
@@ -516,7 +530,7 @@ class Interface(BoxLayout):
         self.ids.graphentrada.remove_plot(self.plotentrada)
         self.ids.graphsaida.remove_plot(self.plotsetpoint)
         self.ids.graphentrada.remove_plot(self.plotsetpoint2)
-        self.ids.graphsaida.remove_plot(self.plotaltura)
+        self.ids.graphentrada.remove_plot(self.plotaltura)
         self.ids.graphsaida._clear_buffer()
         self.ids.graphentrada._clear_buffer()
         while len(lista_entrada) > 0 : lista_entrada.pop()
