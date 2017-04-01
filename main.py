@@ -62,8 +62,8 @@ tensao_min = -4
 #Variaveis do controlador PID
 Derivator=0.0
 Integrator=0.0
-Integrator_max=500
-Integrator_min=-500
+Integrator_max=100
+Integrator_min=-100
 last_time = 0
 
 #Constantes do Controlador PID
@@ -144,34 +144,45 @@ def controlePID_K(set_point,current_value,Kp,Kd,Ki):
     #Declaracoes das variaveis globais
     global Derivator, Integrator, Integrator_max, Integrator_min, flag_pid, PID, last_time
 
-    #h=0.1
+    b = 1 #filtro na acao derivativa
 
-    h = time.time() - last_time  #dt
+    #h = time.time() - last_time  #dt
+    h = 0.1
 
     error = set_point - current_value
+    margem = abs((set_point - current_value)/set_point) 
 
-    Integrator=0
-    Derivator=0
+    #print "error", error
+
     P_value = Kp*error
-    D_value = 0
-    I_value = 0
+    if(flag_pid==0 or flag_pid==1):
+        Integrator=0
+        I_value=0
+    if(flag_pid==0 or flag_pid==2):
+        Derivator=0
+        D_value=0
 
-    if(flag_pid==1 or flag_pid==3): 
-        D_value = Kd*((error - Derivator)/h)
+    if(flag_pid==1 or flag_pid==3):
+        if(margem<=0.03):
+            b = 0.0
+        D_value = Kd*((error - Derivator)/h)*b
         Derivator = error
     if(flag_pid==4):
-        D_value = Kd*((current_value - Derivator)/h)
+        if(margem<=0.03):
+            b = 0.0
+        D_value = Kd*((current_value - Derivator)/h)*b
         Derivator = current_value
     if(flag_pid==2 or flag_pid==3 or flag_pid==4):
         Integrator = Integrator + (Ki*error*h)
+        #print "integrador", Integrator
         if Integrator > Integrator_max:
             Integrator = Integrator_max
         elif Integrator < Integrator_min:
             Integrator = Integrator_min
         I_value = Integrator
 
-    PID = PID + P_value + D_value + I_value
-    print "PID:" , PID
+    PID = P_value + D_value + I_value
+    #print "PID:" , PID
     last_time  = time.time()
     return PID
 
@@ -195,9 +206,9 @@ class Controle(threading.Thread):
 		PID=0.0
 
 		##planta:
-		##startConnection('10.13.99.69',20081)
+		startConnection('10.13.99.69',20081)
 		##servidor:
-		startConnection('localhost',20074)
+		##startConnection('localhost',20074)
 		while(Start):
 			t = time.time() - t_init
 			if(flag_malha == 0):
@@ -211,6 +222,7 @@ class Controle(threading.Thread):
 					volts = Signal.waveSawtooth(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 5):
 					volts = Signal.waveRandom(valor_entrada,periodo,offset,t)
+				altura = getAltura(channel)
 				tensao = writeTensao(channel, volts)
 				v =  quanser.getTension()
 				#print "Tensao: ", v
@@ -226,17 +238,17 @@ class Controle(threading.Thread):
 				cont = t
 			elif(flag_malha == 1):
 				if(flag_signal == 1):
-					volts = Signal.waveStep(valor_entrada,offset)
+				    volts = Signal.waveStep(valor_entrada,offset)
 				elif(flag_signal == 2):
-					volts = Signal.waveSine(valor_entrada,periodo,offset,t)
+				    volts = Signal.waveSine(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 3):
-					volts = Signal.waveSquare(valor_entrada,periodo,offset,t)
+				    volts = Signal.waveSquare(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 4):
-					volts = Signal.waveSawtooth(valor_entrada,periodo,offset,t)
+				    volts = Signal.waveSawtooth(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 5):
-					volts = Signal.waveRandom(valor_entrada,periodo,offset,t)
+				    volts = Signal.waveRandom(valor_entrada,periodo,offset,t)
 				altura = getAltura(channel)
-				
+
 				saida = controlePID_K(volts,altura,Kp,Kd,Ki)
 
 				tensao = writeTensao(channel, saida)
@@ -252,7 +264,7 @@ class Controle(threading.Thread):
 				#nivel_tanque = altura
 				lista_setpoint.append((t, volts))
 				cont = t
-			#time.sleep(0.01)
+				#time.sleep(0.01)
 		endConnection(channel)
 		sys.exit()
 
@@ -326,30 +338,35 @@ class Interface(BoxLayout):
 
 
     def do_p(self):
+        global flag_pid
         self.ids.ki.disabled = True
         self.ids.kd.disabled = True
         self.ids.taui.disabled = True
         self.ids.taud.disabled = True
         flag_pid = 0
     def do_pd(self):
+        global flag_pid
         self.ids.ki.disabled = True
         self.ids.kd.disabled = False
         self.ids.taui.disabled = True
         self.ids.taud.disabled = True
         flag_pid = 1
     def do_pi(self):
+        global flag_pid
         self.ids.ki.disabled = False
         self.ids.kd.disabled = True
         self.ids.taui.disabled = True
         self.ids.taud.disabled = True
         flag_pid = 2
     def do_pid(self):
+        global flag_pid
         self.ids.ki.disabled = False
         self.ids.kd.disabled = False
         self.ids.taui.disabled = True
         self.ids.taud.disabled = True
         flag_pid = 3
     def do_pi_d(self):
+        global flag_pid
         self.ids.ki.disabled = False
         self.ids.kd.disabled = False
         self.ids.taui.disabled = True
