@@ -6,7 +6,7 @@ Interface:
 		orientation: "horizontal"
 	#BOTOES
 		BoxLayout:
-			size_hint: [.4,1]
+			size_hint: [.35,1]
 			orientation: "vertical"
 			
 			#MALHA
@@ -121,19 +121,19 @@ Interface:
 					rows: 5
 					cols: 1
 					Label:
-						id: tensaomin
+						id: tensaominL
 						text: "Tensao Minima"
 					Label:
-						id: tensaomax
+						id: tensaomaxL
 						text: "Tensao Maxima"
 					Label:
-						id: tensaoentrada
+						id: tensaoentradaL
 						text: "Tensao/cm de entrada (MF)"
 					Label:
-						id: offset
+						id: offsetL
 						text: "Offset"
 					Label:
-						id: periodo_label
+						id: periodo_labelL
 						text: "Periodo"
 				GridLayout:
 					rows: 5
@@ -143,9 +143,9 @@ Interface:
 						multiline: False
 						#input_filter: 'float'
 						text: '-4'
-						off_text: root.tensao_min(tensaomin.text)
+						#off_text: root.tensao_min(tensaomin.text)
 					Label:
-						id: kp
+						id: kpL
 						text: "KP"
 					TextInput: 
 						id: kp
@@ -153,19 +153,21 @@ Interface:
 						#readonly: True
 						text: '0'
 						#input_filter: 'float'
-						off_text: root.kp_in(kp.text)
+						#off_text: root.kp_in(kp.text)
 						
 					TextInput: 
 						id: tensaomax
 						multiline: False
 						#input_filter: 'float'
 						text: '4'
-						off_text: root.tensao_max(tensaomax.text)
+						#off_text: root.tensao_max(tensaomax.text)
 					ToggleButton:
 						id: ki_label
 						group: 'integrativo'
 						state: 'down'
 						text: "KI"
+						background_normal: 'ondaup.png'
+						background_down: 'ondadown.png'
 						on_press: root.pressKI()
 					TextInput: 
 						id: ki
@@ -174,19 +176,21 @@ Interface:
 						disabled: True
 						text: '0'
 						#input_filter: 'float'
-						off_text: root.ki_in(ki.text)
+						#off_text: root.ki_in(ki.text)
 						
 					TextInput: 
 						id: tensaoentrada
 						multiline: False
 						#input_filter: 'float'
 						text: '0'
-						off_text: root.tensaoentrada(tensaoentrada.text)	
+						#off_text: root.tensaoentrada(tensaoentrada.text)	
 					ToggleButton:
 						id: kd_label
 						group: 'derivativo'
 						state: 'down'
 						text: "KD"
+						background_normal: 'ondaup.png'
+						background_down: 'ondadown.png'
 						on_press: root.pressKD()
 					TextInput: 
 						id: kd
@@ -195,18 +199,20 @@ Interface:
 						#readonly: True
 						#input_filter: 'float'
 						text: '0'
-						off_text: root.kd_in(kd.text)
+						#off_text: root.kd_in(kd.text)
 						
 					TextInput: 
 						id: offset
 						multiline: False
 						#input_filter: 'float'
 						text: '0'
-						off_text: root.offset(offset.text)
+						#off_text: root.offset(offset.text)
 					ToggleButton:
-						id: taui
+						id: taui_label
 						group: 'integrativo'
 						text: "Ti"
+						background_normal: 'ondaup.png'
+						background_down: 'ondadown.png'
 						on_press: root.pressTI()
 					TextInput: 
 						id: taui
@@ -215,7 +221,7 @@ Interface:
 						#readonly: True
 						#input_filter: 'float'
 						text: '0'
-						off_text: root.taui_in(taui.text)
+						#off_text: root.taui_in(taui.text)
 						
 					TextInput: 
 						id: periodo
@@ -223,12 +229,14 @@ Interface:
 						#input_filter: 'float'
 						disabled: True
 						text: '10'
-						off_text: root.periodo(periodo.text)	
+						#off_text: root.periodo(periodo.text)	
 					
 					ToggleButton:
-						id: taud
+						id: taud_label
 						group: 'derivativo'
 						text: "Td"
+						background_normal: 'ondaup.png'
+						background_down: 'ondadown.png'
 						on_press: root.pressTD()
 					TextInput: 
 						id: taud
@@ -237,7 +245,7 @@ Interface:
 						disabled: True
 						text: '0'
 						#input_filter: 'float'
-						off_text: root.taud_in(taud.text)					
+						#off_text: root.taud_in(taud.text)					
 					
 					
 					
@@ -258,6 +266,13 @@ Interface:
 					border: 30,30,30,30
 					text: "Stop"
 					on_press: root.stop()	
+				Button:
+					id: atualiza
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					border: 30,30,30,30
+					text: "Atualizar\nValores"
+					on_press: root.atualiza()	
 		
 		#Graficos
 		
@@ -319,11 +334,11 @@ Interface:
 		BoxLayout:
 			canvas.before:
 				Color:
-					rgba: 0, 0, 0, 1
+					rgba: 0, 0, .3, 1
 				Rectangle:
 					pos: self.pos
 					size: self.size
-			size_hint: [.25,1]
+			size_hint: [.3,1]
 			orientation: "vertical"
 			
 			BoxLayout:
@@ -344,8 +359,7 @@ Interface:
 					text: "Tanque 2"
 					background_normal: 'ondaup.png'
 					background_down: 'ondadown.png'
-					#on_press: root.tanque2()
-					
+					#on_press: root.tanque2()		
 			
 			
 			BoxLayout:
@@ -393,24 +407,54 @@ Interface:
 							size_hint: [.7,1]
 							##FALTA MUDAR O TAMANHO DESSE BOTAO DE ACORDO COM A ALTURA
 							##E TAMBEM A COR DELE	
-				
-
 			
-				##Image:
-				##	canvas:
-				##		Color:
-				##			rgba: 0, 128, 0, 1
-				##		Rectangle:
-				##			size: self.width -50, self.height - 100
-				##			pos: self.x +50, self.y
-				##	size_hint: [0.7,.7]
-				##	orientation: "vertical"
-				
+			
+			GridLayout:
+				size_hint: [1, .5]
+				rows: 3
+				cols: 2
+				Label:
+					text: "Overshoot:"
+				TextInput: 
+					id: overshoot
+					multiline: False
+					disabled: False
+					readonly: True
+					#input_filter: 'float'
+					text: '-'
+				Label:
+					text: "Tempo de Subida: "
+				TextInput: 
+					id: tempo_subida
+					multiline: False
+					disabled: False
+					readonly: True
+					#input_filter: 'float'
+					text: '-'
+				Label:
+					#text_size: self.size
+					text: "Tempo de Acomodação:"
+				TextInput: 
+					id: tempo_acomodacao
+					multiline: False
+					disabled: False
+					readonly: True
+					#input_filter: 'float'
+					text: '-'
+			
+			
 			
 			
 			BoxLayout:
+				canvas.before:
+					Color:
+						rgba: 0, 0, 0, 1
+					Rectangle:
+						pos: self.pos
+						size: self.size
 				size_hint: [1,.3]
 				orientation: "vertical"
+				
 				Label:
 					id:legenda
 					bold: True

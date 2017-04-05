@@ -206,9 +206,9 @@ class Controle(threading.Thread):
 		PID=0.0
 
 		##planta:
-		startConnection('10.13.99.69',20081)
+		##startConnection('10.13.99.69',20081)
 		##servidor:
-		##startConnection('localhost',20074)
+		startConnection('localhost',20074)
 		while(Start):
 			t = time.time() - t_init
 			if(flag_malha == 0):
@@ -271,6 +271,13 @@ class Controle(threading.Thread):
 
 
 ##-------------------------------------------
+##OBSERVACOES:
+    ##PARA USAR OS CAMPOS DE OVERSHOOT E TEMPOS, FAZER, DENTRO DA CLASSE INTERFACE:
+    ##self.ids.overshoot.text = ""
+    ##self.ids.tempo_subida.text = ""
+    ##self.ids.tempo_acomodacao.text = ""
+    ##TALVEZ Interface.ids.overshoot.text = "" FUNCIONE, FAVOR TESTAR SE NECESSARIO
+
 
 class Interface(BoxLayout):
     def __init__(self,):
@@ -320,22 +327,6 @@ class Interface(BoxLayout):
         self.ids.periodo.disabled = False
 
 
-    def tensao_min(self,value):
-        global tensao_min
-        tensao_min = float(value)
-    def tensao_max(self,value):
-        global tensao_max
-        tensao_max = float(value)
-    def offset(self,value):
-        global offset
-        offset = float(value)
-    def tensaoentrada(self,value):
-        global valor_entrada
-        valor_entrada = float(value)
-    def periodo(self,value):
-        global periodo
-        periodo = float(value)
-
 
     def do_p(self):
         global flag_pid
@@ -374,62 +365,81 @@ class Interface(BoxLayout):
         flag_pid = 4
 
 
-    def kp_in(self, value):
+    def atualiza(self):
+        global tensao_min, tensao_max, offset, valor_entrada, periodo
         global Kp, Ki, Kd, taui, taud
+        tensao_min = float(self.ids.tensaomin.text)
+        tensao_max = float(self.ids.tensaomax.text)
+        offset = float(self.ids.offset.text)
+        valor_entrada = float(self.ids.tensaoentrada.text)
+        periodo = float(self.ids.periodo.text)
+##        print "tensaomax: ", tensao_max
+##        print "tensaomin: ", tensao_min
+##        print "offset: ", offset
+##        print "entrada: ", valor_entrada
+##        print "periodo: ", periodo
+        ##ATE AQUI OK
+        Kp = float(self.ids.kp.text)
+        Kd = float(self.ids.kd.text)
+        Ki = float(self.ids.ki.text)
+        taui = float(self.ids.taui.text)
+        taud = float(self.ids.taud.text)
+        if (self.ids.kd_label.state == 'down'):
+            self.kd_in()
+        if (self.ids.ki_label.state == 'down'):
+            self.ki_in()
+        if (self.ids.taud_label.state == 'down'):
+            self.taud_in()
+        if (self.ids.taui_label.state == 'down'):
+            self.taui_in()
+##        print "kp: ", Kp
+##        print "kd: ", Ki
+##        print "ki: ", Kd
+##        print "taud: ", taui
+##        print "taui: ", taud
+
+
+##RETIREI A FUNCAO KP_IN POIS ELA TORNOU-SE OBSOLETA (E ESTA BUGANDO OS VALORES DOS TAUS)
+
+    def kd_in(self):
+        global  Kp, Kd, taud
         try:
-            Kp = float(value)
-        except:
-            Kp = 0.0
-        try:
-            taui = calculaTauI(Kp, Ki)
-            taud = calculaTauD(Kp, Kd)
-            self.ids.taui.text = str(taui)
-            self.ids.taud.text = str(taud)
-        except:
-            pass
-    def kd_in(self, value):
-        global  Kp, Kd, taud#, flag_modo
-        try:
-            Kd = float(value)
+            Kd = float(self.ids.kd.text)
         except:
             Kd = 0.0
-            #flag_modo = 0
         try:
             taud = calculaTauD(Kp, Kd)
             self.ids.taud.text = str(taud)
         except:
             self.ids.taud.text = "0.0"
-    def ki_in(self, value):
-        global Kp, taui, Ki#, flag_modo
+    def ki_in(self):
+        global Kp, taui, Ki
         try:
-            Ki = float(value)
+            Ki = float(self.ids.ki.text)
         except:
             Ki = 0.0
-            #flag_modo = 0
         try:
             taui = calculaTauI(Kp, Ki)
             self.ids.taui.text = str(taui)
         except:
             self.ids.taui.text = "0.0"
-    def taud_in(self, value):
-        global Kp, Kd, taud#, flag_modo
+    def taud_in(self):
+        global Kp, Kd, taud
         try:
-            taud = float(value)
+            taud = float(self.ids.taud.text)
         except:
             taud = 0.0
-            #flag_modo = 1
         try:
             Kd = calculaKD(taud, Kp)
             self.ids.kd.text = str(Kd)
         except:
             self.ids.kd.text = "0.0"
-    def taui_in(self, value):
-        global Kp, Ki, taui#, flag_modo
+    def taui_in(self):
+        global Kp, Ki, taui
         try:
-            taui = float(value)
+            taui = float(self.ids.taui.text)
         except:
             taui = 0.0
-            #flag_modo = 1
         try:
             Ki = calculaKI(taui, Kp)
             self.ids.ki.text = str(Ki)
@@ -438,36 +448,26 @@ class Interface(BoxLayout):
 
 
     def pressKD(self):
-        #global flag_modo
-        #flag_modo = 0
-        self.ids.kd.disabled = False
-        self.ids.taud.disabled = True
+        global flag_pid
+        if (flag_pid == 1 or flag_pid == 3 or flag_pid == 4):
+            self.ids.kd.disabled = False
+            self.ids.taud.disabled = True
     def pressKI(self):
-        #global flag_modo
-        #flag_modo = 0
-        self.ids.ki.disabled = False
-        self.ids.taui.disabled = True
+        global flag_pid
+        if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
+            self.ids.ki.disabled = False
+            self.ids.taui.disabled = True
     def pressTD(self):
-        #global flag_modo
-        #flag_modo = 0
-        self.ids.kd.disabled = True
-        self.ids.taud.disabled = False
+        global flag_pid
+        if (flag_pid == 1 or flag_pid == 3 or flag_pid == 4):
+            self.ids.kd.disabled = True
+            self.ids.taud.disabled = False
     def pressTI(self):
-        #global flag_modo
-        #flag_modo = 0
-        self.ids.ki.disabled = True
-        self.ids.taui.disabled = False
+        global flag_pid
+        if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
+            self.ids.ki.disabled = True
+            self.ids.taui.disabled = False
 
-
-
-##def calculaTauD(Kp,Kd):
-##    return  float(Kd/Kp)
-##def calculaKD(taud,Kp):
-##    return float(taud*Kp)
-##def calculaTauI(Kp,Ki):
-##    return  float(Kp/Ki)
-##def calculaKI(taui,Ki):
-##    return float(Kp/taui)        
 
 
 ##FUNCOES PARA CONTROLE DA INTERFACE E CHAMADA DO PROGRAMA DE CONTROLE:
@@ -475,6 +475,7 @@ class Interface(BoxLayout):
     def startsaida(self):
         global Start
         Start = True
+        self.atualiza()
         control = Controle()
         control.start()
         self.ids.graphsaida.add_plot(self.plotsaida)
