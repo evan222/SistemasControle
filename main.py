@@ -62,8 +62,9 @@ tensao_min = -4
 #Variaveis do controlador PID
 Derivator=0.0
 Integrator=0.0
-Integrator_max=500
-Integrator_min=-500
+Integrator_max=100
+Integrator_min=-100
+last_time = 0
 
 #Constantes do Controlador PID
 taud=0.0
@@ -141,68 +142,48 @@ def calculaKI(taui,Ki):
 ##Calculo controle PID:
 def controlePID_K(set_point,current_value,Kp,Kd,Ki):
     #Declaracoes das variaveis globais
-    global Derivator, Integrator, Integrator_max, Integrator_min, flag_pid,PID
-    h=0.1
+    global Derivator, Integrator, Integrator_max, Integrator_min, flag_pid, PID, last_time
+
+    b = 1 #filtro na acao derivativa
+
+    #h = time.time() - last_time  #dt
+    h = 0.1
 
     error = set_point - current_value
+    margem = abs((set_point - current_value)/set_point) 
 
-    if(flag_pid==0 or flag_pid==1):
-        Integrator=0
-    if(flag_pid==0 or flag_pid==2):
-        Derivator=0
-    if(flag_pid==0 or flag_pid==1 or flag_pid==2 or flag_pid==3 or flag_pid==4):
-        P_value = Kp*error
-        PID = PID + P_value
-    if(flag_pid==1 or flag_pid==3):
-        D_value = Kd*((error - Derivator)/h)
-        Derivator = error
-        PID = PID + D_value
-    if(flag_pid==4):
-        D_value = Kd*((current_value - Derivator)/h)
-        Derivator = current_value
-        PID = PID + D_value
-    if(flag_pid==2 or flag_pid==3 or flag_pid==4):
-        Integrator = Integrator + (Ki*error*h)
-        if Integrator > Integrator_max:
-            Integrator = Integrator_max
-        elif Integrator < Integrator_min:
-            Integrator = Integrator_min
-        I_value = Integrator
-        PID = PID + I_value
-    return PID
+    #print "error", error
 
-def controlePID_TAU(set_point,current_value,Kp,Td,Ti):
-    #Declaracoes das variaveis globais
-    global Integrator_max, Integrator_min, flag_pid, PID
-    h=0.1
-
-    error = set_point - current_value
-
+    P_value = Kp*error
     if(flag_pid==0 or flag_pid==1):
         Integrator=0
         I_value=0
     if(flag_pid==0 or flag_pid==2):
         Derivator=0
         D_value=0
-    if(flag_pid==0 or flag_pid==1 or flag_pid==2 or flag_pid==3 or flag_pid==4):
-        P_value = Kp*error
-        PID = PID + P_value
+
     if(flag_pid==1 or flag_pid==3):
-        D_value = Kp*Td*((error - Derivator)/h)
+        if(margem<=0.03):
+            b = 0.0
+        D_value = Kd*((error - Derivator)/h)*b
         Derivator = error
-        PID = PID + D_value
     if(flag_pid==4):
-        D_value = Kp*Td*((current_value - Derivator)/h)
+        if(margem<=0.03):
+            b = 0.0
+        D_value = Kd*((current_value - Derivator)/h)*b
         Derivator = current_value
-        PID = PID + D_value
     if(flag_pid==2 or flag_pid==3 or flag_pid==4):
-        Integrator = Integrator + ((Kp/Ti)*error*h)
+        Integrator = Integrator + (Ki*error*h)
+        #print "integrador", Integrator
         if Integrator > Integrator_max:
             Integrator = Integrator_max
         elif Integrator < Integrator_min:
             Integrator = Integrator_min
         I_value = Integrator
-        PID = PID + I_value
+
+    PID = P_value + D_value + I_value
+    #print "PID:" , PID
+    last_time  = time.time()
     return PID
 
 
@@ -215,12 +196,13 @@ class Controle(threading.Thread):
 
 	def run(self):	
 		global lista_saida, lista_entrada, lista_setpoint, cont, Start, nivel_tanque
-		global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd,taud, taui, flag_modo,PID
+		global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd,taud, taui, flag_modo,PID, last_time
 		
 		tensao = 0.0
 		channel = 0
 		read = 0.0
 		t_init = time.time()
+		last_time = time.time()
 		PID=0.0
 
 		##planta:
@@ -240,6 +222,7 @@ class Controle(threading.Thread):
 					volts = Signal.waveSawtooth(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 5):
 					volts = Signal.waveRandom(valor_entrada,periodo,offset,t)
+				altura = getAltura(channel)
 				tensao = writeTensao(channel, volts)
 				v =  quanser.getTension()
 				#print "Tensao: ", v
@@ -255,20 +238,19 @@ class Controle(threading.Thread):
 				cont = t
 			elif(flag_malha == 1):
 				if(flag_signal == 1):
-					volts = Signal.waveStep(valor_entrada,offset)
+				    volts = Signal.waveStep(valor_entrada,offset)
 				elif(flag_signal == 2):
-					volts = Signal.waveSine(valor_entrada,periodo,offset,t)
+				    volts = Signal.waveSine(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 3):
-					volts = Signal.waveSquare(valor_entrada,periodo,offset,t)
+				    volts = Signal.waveSquare(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 4):
-					volts = Signal.waveSawtooth(valor_entrada,periodo,offset,t)
+				    volts = Signal.waveSawtooth(valor_entrada,periodo,offset,t)
 				elif(flag_signal == 5):
-					volts = Signal.waveRandom(valor_entrada,periodo,offset,t)
+				    volts = Signal.waveRandom(valor_entrada,periodo,offset,t)
 				altura = getAltura(channel)
-				if flag_modo==0:
-				    saida = controlePID_K(volts,altura,Kp,Kd,Ki)
-				elif flag_modo==1:
-				    saida = controlePID_TAU(volts,altura,Kp,taud,taui)
+
+				saida = controlePID_K(volts,altura,Kp,Kd,Ki)
+
 				tensao = writeTensao(channel, saida)
 				v =  quanser.getTension()
 				#print "Tensao: ", v
@@ -282,7 +264,7 @@ class Controle(threading.Thread):
 				#nivel_tanque = altura
 				lista_setpoint.append((t, volts))
 				cont = t
-			#time.sleep(0.01)
+				#time.sleep(0.01)
 		endConnection(channel)
 		sys.exit()
 
@@ -356,30 +338,35 @@ class Interface(BoxLayout):
 
 
     def do_p(self):
+        global flag_pid
         self.ids.ki.disabled = True
         self.ids.kd.disabled = True
         self.ids.taui.disabled = True
         self.ids.taud.disabled = True
         flag_pid = 0
     def do_pd(self):
+        global flag_pid
         self.ids.ki.disabled = True
         self.ids.kd.disabled = False
         self.ids.taui.disabled = True
         self.ids.taud.disabled = True
         flag_pid = 1
     def do_pi(self):
+        global flag_pid
         self.ids.ki.disabled = False
         self.ids.kd.disabled = True
         self.ids.taui.disabled = True
         self.ids.taud.disabled = True
         flag_pid = 2
     def do_pid(self):
+        global flag_pid
         self.ids.ki.disabled = False
         self.ids.kd.disabled = False
         self.ids.taui.disabled = True
         self.ids.taud.disabled = True
         flag_pid = 3
     def do_pi_d(self):
+        global flag_pid
         self.ids.ki.disabled = False
         self.ids.kd.disabled = False
         self.ids.taui.disabled = True
@@ -401,48 +388,48 @@ class Interface(BoxLayout):
         except:
             pass
     def kd_in(self, value):
-        global  Kp, Kd, taud, flag_modo
+        global  Kp, Kd, taud#, flag_modo
         try:
             Kd = float(value)
         except:
             Kd = 0.0
-            flag_modo = 0
+            #flag_modo = 0
         try:
             taud = calculaTauD(Kp, Kd)
             self.ids.taud.text = str(taud)
         except:
             self.ids.taud.text = "0.0"
     def ki_in(self, value):
-        global Kp, taui, Ki, flag_modo
+        global Kp, taui, Ki#, flag_modo
         try:
             Ki = float(value)
         except:
             Ki = 0.0
-            flag_modo = 0
+            #flag_modo = 0
         try:
             taui = calculaTauI(Kp, Ki)
             self.ids.taui.text = str(taui)
         except:
             self.ids.taui.text = "0.0"
     def taud_in(self, value):
-        global Kp, Kd, taud, flag_modo
+        global Kp, Kd, taud#, flag_modo
         try:
             taud = float(value)
         except:
             taud = 0.0
-            flag_modo = 1
+            #flag_modo = 1
         try:
             Kd = calculaKD(taud, Kp)
             self.ids.kd.text = str(Kd)
         except:
             self.ids.kd.text = "0.0"
     def taui_in(self, value):
-        global Kp, Ki, taui, flag_modo
+        global Kp, Ki, taui#, flag_modo
         try:
             taui = float(value)
         except:
             taui = 0.0
-            flag_modo = 1
+            #flag_modo = 1
         try:
             Ki = calculaKI(taui, Kp)
             self.ids.ki.text = str(Ki)
@@ -451,23 +438,23 @@ class Interface(BoxLayout):
 
 
     def pressKD(self):
-        global flag_modo
-        flag_modo = 0
+        #global flag_modo
+        #flag_modo = 0
         self.ids.kd.disabled = False
         self.ids.taud.disabled = True
     def pressKI(self):
-        global flag_modo
-        flag_modo = 0
+        #global flag_modo
+        #flag_modo = 0
         self.ids.ki.disabled = False
         self.ids.taui.disabled = True
     def pressTD(self):
-        global flag_modo
-        flag_modo = 0
+        #global flag_modo
+        #flag_modo = 0
         self.ids.kd.disabled = True
         self.ids.taud.disabled = False
     def pressTI(self):
-        global flag_modo
-        flag_modo = 0
+        #global flag_modo
+        #flag_modo = 0
         self.ids.ki.disabled = True
         self.ids.taui.disabled = False
 

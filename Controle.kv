@@ -6,9 +6,10 @@ Interface:
 		orientation: "horizontal"
 	#BOTOES
 		BoxLayout:
-			size_hint: [.5,1]
+			size_hint: [.4,1]
 			orientation: "vertical"
 			
+			#MALHA
 			BoxLayout:
 				size_hint: [1,.8]
 				orientation: "vertical"
@@ -30,7 +31,48 @@ Interface:
 						background_down: 'ondadown.png'
 						text: "Malha Fechada"
 						on_press: root.MF()
-						
+			#PID
+			BoxLayout:
+				size_hint: [1,0.6]
+				orientation: "horizontal"
+				ToggleButton:
+					id: p
+					group: 'pid'
+					state: 'down'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "P"
+					on_press: root.do_p()
+				ToggleButton:
+					id: pd
+					group: 'pid'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "PD"
+					on_press: root.do_pd()
+				ToggleButton:
+					id: pi
+					group: 'pid'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "PI"
+					on_press: root.do_pi()
+				ToggleButton:
+					id: pid
+					group: 'pid'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "PID"
+					on_press: root.do_pid()
+				ToggleButton:
+					id: pi_d 
+					group: 'pid'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					text: "PI-D"
+					on_press: root.do_pi_d()
+			
+			#ONDA
 			BoxLayout:
 				size_hint: [1,1.2]
 				orientation: "vertical"
@@ -71,8 +113,9 @@ Interface:
 					text: "Onda Aleatória"
 					on_press: root.aleatoria()
 			
+			#INPUTS
 			BoxLayout:
-				size_hint: [1,2]
+				size_hint: [1,1.5]
 				orientation: "horizontal"
 				GridLayout:
 					rows: 5
@@ -90,7 +133,7 @@ Interface:
 						id: offset
 						text: "Offset"
 					Label:
-						id: periodo
+						id: periodo_label
 						text: "Periodo"
 				GridLayout:
 					rows: 5
@@ -98,78 +141,108 @@ Interface:
 					TextInput: 
 						id: tensaomin
 						multiline: False
-						#input_filter: 'string'
-						text: '0'
-						on_text: root.tensao_min(tensaomin.text)
+						#input_filter: 'float'
+						text: '-4'
+						off_text: root.tensao_min(tensaomin.text)
 					Label:
 						id: kp
 						text: "KP"
 					TextInput: 
 						id: kp
 						multiline: False
+						#readonly: True
 						text: '0'
+						#input_filter: 'float'
+						off_text: root.kp_in(kp.text)
 						
 					TextInput: 
 						id: tensaomax
 						multiline: False
 						#input_filter: 'float'
-						text: '0'
-						on_text: root.tensao_max(tensaomax.text)
-					Label:
-						id: ki
+						text: '4'
+						off_text: root.tensao_max(tensaomax.text)
+					ToggleButton:
+						id: ki_label
+						group: 'integrativo'
+						state: 'down'
 						text: "KI"
+						on_press: root.pressKI()
 					TextInput: 
 						id: ki
 						multiline: False
+						#readonly: True
+						disabled: True
 						text: '0'
+						#input_filter: 'float'
+						off_text: root.ki_in(ki.text)
 						
 					TextInput: 
 						id: tensaoentrada
 						multiline: False
 						#input_filter: 'float'
 						text: '0'
-						on_text: root.tensaoentrada(tensaoentrada.text)	
-					Label:
-						id: kd
+						off_text: root.tensaoentrada(tensaoentrada.text)	
+					ToggleButton:
+						id: kd_label
+						group: 'derivativo'
+						state: 'down'
 						text: "KD"
+						on_press: root.pressKD()
 					TextInput: 
 						id: kd
 						multiline: False
+						disabled: True
+						#readonly: True
+						#input_filter: 'float'
 						text: '0'
+						off_text: root.kd_in(kd.text)
 						
 					TextInput: 
 						id: offset
 						multiline: False
 						#input_filter: 'float'
 						text: '0'
-						on_text: root.offset(offset.text)
-					Label:
+						off_text: root.offset(offset.text)
+					ToggleButton:
 						id: taui
+						group: 'integrativo'
 						text: "Ti"
+						on_press: root.pressTI()
 					TextInput: 
 						id: taui
 						multiline: False
+						disabled: True
+						#readonly: True
+						#input_filter: 'float'
 						text: '0'
+						off_text: root.taui_in(taui.text)
 						
 					TextInput: 
 						id: periodo
 						multiline: False
 						#input_filter: 'float'
-						text: '0'
-						on_text: root.periodo(periodo.text)	
+						disabled: True
+						text: '10'
+						off_text: root.periodo(periodo.text)	
 					
-					Label:
+					ToggleButton:
 						id: taud
+						group: 'derivativo'
 						text: "Td"
+						on_press: root.pressTD()
 					TextInput: 
-						id: taup
+						id: taud
+						#readonly: True
 						multiline: False
-						text: '0'					
+						disabled: True
+						text: '0'
+						#input_filter: 'float'
+						off_text: root.taud_in(taud.text)					
 					
 					
 					
 			BoxLayout:
-				size_hint: [1,1]
+				size_hint: [1,0.8]
 				orientation: "horizontal"
 				Button:
 					id: start
@@ -209,13 +282,13 @@ Interface:
 			Graph:
 				id:graphsaida
 				xlabel:"Tempo"
-				ylabel:"Tensao Saida"
+				ylabel:"Saida"
 				xmin: 0
 				xmax: 100
 				ymin: -5
-				ymax: 5
+				ymax: 30
 				y_ticks_minor: 2
-				y_ticks_major: 2
+				y_ticks_major: 5
 				y_grid: True
 				y_grid_label: True
 				tick_color: 0,0,0,1.0
@@ -226,13 +299,13 @@ Interface:
 			Graph:
 				id:graphentrada
 				xlabel:"Tempo"
-				ylabel:"Tensao Entrada"
+				ylabel:"Entrada"
 				xmin: 0
 				xmax: 100
-				ymin: -5
-				ymax: 5
+				ymin: -4
+				ymax: 28
 				y_ticks_minor: 2
-				y_ticks_major: 2
+				y_ticks_major: 5
 				y_grid: True
 				y_grid_label: True
 				tick_color: 0,0,0,1.0
@@ -241,7 +314,138 @@ Interface:
 				label_options:{'color': (0,0,0,1)}
 		
 		
+		#LEGENDAS E TANQUES
+		
+		BoxLayout:
+			canvas.before:
+				Color:
+					rgba: 0, 0, 0, 1
+				Rectangle:
+					pos: self.pos
+					size: self.size
+			size_hint: [.25,1]
+			orientation: "vertical"
+			
+			BoxLayout:
+				size_hint: [1,.3]
+				orientation: "horizontal"
+				
+				ToggleButton:
+					id: tanque1
+					group: 'tanques'
+					text: "Tanque 1"
+					state: 'down'
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					#on_press: root.tanque1()
+				ToggleButton:
+					id: tanque2
+					group: 'tanques'
+					text: "Tanque 2"
+					background_normal: 'ondaup.png'
+					background_down: 'ondadown.png'
+					#on_press: root.tanque2()
+					
+			
+			
+			BoxLayout:
+				orientation: "horizontal"
+				#size_hint: [1,.8]
+				
+				BoxLayout:
+					canvas.before:
+						Color:
+							rgba: 1, 1, 1, 1
+						Rectangle:
+							pos: self.pos
+							size: self.size
+							source: 'tanque.png'
+					#size_hint: [1,.7]
+					orientation: "vertical"
+					
+					
+					BoxLayout:
+						orientation: "horizontal"
+						BoxLayout:
+							size_hint: [.3,1]
+						Button:
+							size_hint: [.7,1]
+							##FALTA MUDAR O TAMANHO DESSE BOTAO DE ACORDO COM A ALTURA
+							##E TAMBEM A COR DELE
+				
+				BoxLayout:
+					canvas.before:
+						Color:
+							rgba: 1, 1, 1, 1
+						Rectangle:
+							pos: self.pos
+							size: self.size
+							source: 'tanque.png'
+					#size_hint: [1,.7]
+					orientation: "vertical"
+					
+					
+					BoxLayout:
+						orientation: "horizontal"
+						BoxLayout:
+							size_hint: [.3,1]
+						Button:
+							size_hint: [.7,1]
+							##FALTA MUDAR O TAMANHO DESSE BOTAO DE ACORDO COM A ALTURA
+							##E TAMBEM A COR DELE	
 				
 
+			
+				##Image:
+				##	canvas:
+				##		Color:
+				##			rgba: 0, 128, 0, 1
+				##		Rectangle:
+				##			size: self.width -50, self.height - 100
+				##			pos: self.x +50, self.y
+				##	size_hint: [0.7,.7]
+				##	orientation: "vertical"
 				
-
+			
+			
+			BoxLayout:
+				size_hint: [1,.3]
+				orientation: "vertical"
+				Label:
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text: 'Legenda:'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 0,0,1,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text: 'Set Point'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 1,0,0,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text: 'Tensão'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 0,128,0,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text: 'Altura'
