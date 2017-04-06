@@ -48,9 +48,6 @@ flag_pid = 0
 ##flag_pid=3 -> controle PID
 ##flag_pid=4 -> controle PI-D
 ##"""
-flag_modo = 0
-##flag_modo = 0 -> Ki e Kd
-##flag_modo = 1 -> taui e taud
 
 
 valor_entrada = 0
@@ -80,8 +77,9 @@ lista_saida = [(0, 0)]
 lista_entrada = [(0, 0)]
 lista_setpoint = [(0, 0)]
 lista_altura = [(0, 0)]
+contador = 0
 
-cont = 0.0
+x_axis_range = 0.0
 nivel_tanque = 0.0
 channel = 0
 
@@ -200,11 +198,22 @@ def controlePID_K(set_point, current_value, Kp, Kd, Ki):
     return PID
 
 
+def atualizaListas(tempo, tensao_saida, tensao_sensor, altura, set_point):
+    global contador, lista_saida, lista_entrada, lista_altura, lista_setpoint
+    if ( contador >=10):
+        lista_saida.append((tempo, tensao_saida))
+        lista_entrada.append((tempo, tensao_sensor))
+        lista_altura.append((tempo, altura))
+        lista_setpoint.append((tempo, set_point))
+        contador = 0
+    else:
+        contador = contador + 1
+
+
 def calculaOvershoot(set_point, current_value):
     global overshoot
     if(current_value>set_point):
         overshoot = float(current_value - set_point)
-        #round(overshoot,3)
     else:
         overshoot = 0
 
@@ -218,14 +227,13 @@ class Controle(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        global lista_saida, lista_entrada, lista_setpoint, cont, Start, nivel_tanque, channel, overshoot
-        global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd, taud, taui, flag_modo, PID
+        global x_axis_range, Start, nivel_tanque, channel, overshoot
+        global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd, taud, taui, PID
 
         tensao = 0.0
         read = 0.0
         t_init = time.time()
         PID = 0.0
-        #flag_overshoot = False
 
         ##planta:
         ##startConnection('10.13.99.69',20081)
@@ -247,13 +255,12 @@ class Controle(threading.Thread):
                 altura = float(getAltura(channel))
                 tensao = writeTensao(channel, volts)
                 v = float(quanser.getTension())
-                lista_saida.append((t, v))
                 read = float(readSensor(channel))
-                lista_entrada.append((t, read))
-                lista_altura.append((t, altura))
-                nivel_tanque = altura
-                lista_setpoint.append((t, float(volts)))
-                cont = float(t)
+                nivel_tanque = altura  # atualiza o nivel do tanque
+                x_axis_range = float(t)  # atualiza o range do grafico
+                atualizaListas(t, v, read, altura, volts) #atualiza os valores plotados
+                calculaOvershoot(volts, altura)
+
             elif (flag_malha == 1):
                 if (flag_signal == 1):
                     volts = Signal.waveStep(valor_entrada, offset)
@@ -267,31 +274,15 @@ class Controle(threading.Thread):
                     volts = Signal.waveRandom(valor_entrada, periodo, offset, t)
                 #volts eh o set_point
                 altura = float(getAltura(channel))
-                #altura = round(altura, 3)
                 saida = controlePID_K(volts, altura, Kp, Kd, Ki)
                 tensao = writeTensao(channel, saida)
                 v = float(quanser.getTension())
-                #v = round(v, 3)
-                lista_saida.append((t, v))
                 read = float(readSensor(channel))
-                #read = round(read, 3)
-                lista_entrada.append((t, read))
-                lista_altura.append((t, altura))
-                nivel_tanque = altura
-                #volts = round(volts, 3)
-                lista_setpoint.append((t, volts))
-                cont = float(t)
+                nivel_tanque = altura #atualiza o nivel do tanque
+                x_axis_range = float(t) #atualiza o range do grafico
+                atualizaListas(t, v, read, altura, volts) #atualiza os valores plotados
                 calculaOvershoot(volts, altura)
-             #   if (flag_overshoot):
-             #       overshoot = altura
-            # print altura
 
-            ##WTF
-            ##COLOCANDO ESSAS 2 LINHAS ABAIXO O ERRO PARA DE ACONTECER
-            # contador = contador + 1
-            # print "iteracao:", contador
-
-            # time.sleep(0.001)
         endConnection(channel)
         sys.exit()
 
@@ -540,12 +531,12 @@ class Interface(BoxLayout):
 
     ##funcao caso queira adequar os ranges de x:
     def update_xaxis(self, *args):
-        global cont
-        if (cont > 80):
-            self.ids.graphsaida.xmin = cont - 80
-            self.ids.graphsaida.xmax = cont + 20
-            self.ids.graphentrada.xmin = cont - 80
-            self.ids.graphentrada.xmax = cont + 20
+        global x_axis_range
+        if (x_axis_range > 80):
+            self.ids.graphsaida.xmin = x_axis_range - 80
+            self.ids.graphsaida.xmax = x_axis_range + 20
+            self.ids.graphentrada.xmin = x_axis_range - 80
+            self.ids.graphentrada.xmax = x_axis_range + 20
 
     def get_valuesaida(self, dt):
         self.plotsaida.points = [i for i in lista_saida]
