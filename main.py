@@ -48,7 +48,11 @@ flag_pid = 0
 ##flag_pid=3 -> controle PID
 ##flag_pid=4 -> controle PI-D
 ##"""
-
+flag = True # flag do tempo de subida
+flag_subida = True
+flag_overshoot = True # flag do overshoot
+flag_acomodacao = True # flag de acomodacao
+flag_mudou_setPoint =  False
 
 valor_entrada = 0
 periodo = 1
@@ -61,7 +65,6 @@ Derivator = 0.0
 Integrator = 0.0
 Integrator_max = 100
 Integrator_min = -100
-last_time = 0
 
 # Constantes do Controlador PID
 taud = 0.0
@@ -85,8 +88,13 @@ channel = 0
 
 ##Variaveis de resposta do Sistema
 overshoot = 0.0
+overshootPercentual = 0.0
 tempo_subida = 0.0
 tempo_acomodacao = 0.0
+#Variaveis do tempo de subida
+tempo_final = 0.0
+tempo_inicial = 0.0
+
 
 
 ##-------------------------------------------
@@ -210,13 +218,37 @@ def atualizaListas(tempo, tensao_saida, tensao_sensor, altura, set_point):
         contador = contador + 1
 
 
-def calculaOvershoot(set_point, current_value):
-    global overshoot
-    if(current_value>set_point):
-        overshoot = float(current_value - set_point)
-    else:
-        overshoot = 0
+def calculaOvershoot(set_point,current_value):
+    global overshoot, overshootPercentual
+    if(current_value>overshoot and flag_overshoot):
+        overshoot = current_value
+        if(current_value>set_point):
+            overshootPercentual = round(abs(((current_value - set_point)/set_point)*100), 2)
 
+def calculaTempoSubida(set_point, current_value, t):
+    global flag, tempo_subida, tempo_final, tempo_inicial, flag_subida
+    if(current_value<set_point and current_value>(set_point-set_point*0.05) and flag_subida):
+        tempo_final = t
+        tempo_subida = tempo_final - tempo_inicial
+        flag_subida = False
+    elif(current_value>(set_point*0.05) and flag):
+        tempo_inicial=t
+        flag=False
+
+def calculaTempoAcomodacao(set_point, current_value, t):
+    global flag_subida, tempo_acomodacao, tempo_inicial, flag_acomodacao, tempo_final, flag_overshoot
+    if(((current_value<set_point and current_value>(set_point-set_point*0.05)) or (current_value>set_point and current_value<(set_point+set_point*0.05))) and flag_acomodacao):
+        if((t-tempo_final)>5.0 and flag_subida==False):
+            tempo_acomodacao = t - tempo_inicial
+            flag_acomodacao = False
+            flag_overshoot = False
+
+def atualizaTempos(t):
+    global flag_mudou_setPoint, flag, tempo_inicial
+    if(flag_mudou_setPoint):
+        tempo_inicial=t
+        flag_mudou_setPoint = False
+        flag = False
 
 
 ##CONTROLE:
@@ -227,7 +259,7 @@ class Controle(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        global x_axis_range, Start, nivel_tanque, channel, overshoot
+        global x_axis_range, Start, nivel_tanque, channel, overshoot, oershootPercentual
         global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd, taud, taui, PID
 
         tensao = 0.0
@@ -243,45 +275,51 @@ class Controle(threading.Thread):
             t = float(time.time() - t_init)
             if (flag_malha == 0):
                 if (flag_signal == 1):
-                    volts = Signal.waveStep(valor_entrada, offset)
+                    set_point = Signal.waveStep(valor_entrada, offset)
                 elif (flag_signal == 2):
-                    volts = Signal.waveSine(valor_entrada, periodo, offset, t)
+                    set_point = Signal.waveSine(valor_entrada, periodo, offset, t)
                 elif (flag_signal == 3):
-                    volts = Signal.waveSquare(valor_entrada, periodo, offset, t)
+                    set_point = Signal.waveSquare(valor_entrada, periodo, offset, t)
                 elif (flag_signal == 4):
-                    volts = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
+                    set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
                 elif (flag_signal == 5):
-                    volts = Signal.waveRandom(valor_entrada, periodo, offset, t)
+                    set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
                 altura = float(getAltura(channel))
-                tensao = writeTensao(channel, volts)
+                tensao = writeTensao(0, set_point)
                 v = float(quanser.getTension())
+                lista_saida.append((t, v))
                 read = float(readSensor(channel))
-                nivel_tanque = altura  # atualiza o nivel do tanque
-                x_axis_range = float(t)  # atualiza o range do grafico
-                atualizaListas(t, v, read, altura, volts) #atualiza os valores plotados
-                calculaOvershoot(volts, altura)
-
+                lista_entrada.append((t, read))
+                lista_altura.append((t, altura))
+                nivel_tanque = altura
+                lista_setpoint.append((t, float(set_point)))
+                cont = float(t)
             elif (flag_malha == 1):
                 if (flag_signal == 1):
-                    volts = Signal.waveStep(valor_entrada, offset)
+                    set_point = Signal.waveStep(valor_entrada, offset)
                 elif (flag_signal == 2):
-                    volts = Signal.waveSine(valor_entrada, periodo, offset, t)
+                    set_point = Signal.waveSine(valor_entrada, periodo, offset, t)
                 elif (flag_signal == 3):
-                    volts = Signal.waveSquare(valor_entrada, periodo, offset, t)
+                    set_point = Signal.waveSquare(valor_entrada, periodo, offset, t)
                 elif (flag_signal == 4):
-                    volts = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
+                    set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
                 elif (flag_signal == 5):
-                    volts = Signal.waveRandom(valor_entrada, periodo, offset, t)
-                #volts eh o set_point
+                    set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
                 altura = float(getAltura(channel))
-                saida = controlePID_K(volts, altura, Kp, Kd, Ki)
-                tensao = writeTensao(channel, saida)
+                saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
+                tensao = writeTensao(0, saida)
                 v = float(quanser.getTension())
+                lista_saida.append((t, v))
                 read = float(readSensor(channel))
-                nivel_tanque = altura #atualiza o nivel do tanque
-                x_axis_range = float(t) #atualiza o range do grafico
-                atualizaListas(t, v, read, altura, volts) #atualiza os valores plotados
-                calculaOvershoot(volts, altura)
+                lista_entrada.append((t, read))
+                lista_altura.append((t, altura))
+                nivel_tanque = altura
+                lista_setpoint.append((t, set_point))
+                cont = float(t)
+                calculaOvershoot(set_point, altura)
+                atualizaTempos(t)
+                calculaTempoSubida(set_point, altura, t)
+                calculaTempoAcomodacao(set_point, altura, t)
 
         endConnection(channel)
         sys.exit()
@@ -391,8 +429,14 @@ class Interface(BoxLayout):
 
     ##ATUALIZAR VALORES
     def atualiza(self):
-        global tensao_min, tensao_max, offset, valor_entrada, periodo
+        global tensao_min, tensao_max, offset, valor_entrada, periodo, flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint
         global Kp, Ki, Kd, taui, taud
+        if((valor_entrada!=float(self.ids.tensaoentrada.text)) or (offset!=float(self.ids.offset.text))):
+            flag = True
+            flag_subida = True
+            flag_acomodacao = True
+            flag_overshoot = True
+            flag_mudou_setPoint = True
         tensao_min = float(self.ids.tensaomin.text)
         tensao_max = float(self.ids.tensaomax.text)
         offset = float(self.ids.offset.text)
@@ -502,8 +546,12 @@ class Interface(BoxLayout):
     ##FUNCOES PARA CONTROLE DA INTERFACE E CHAMADA DO PROGRAMA DE CONTROLE:
 
     def startsaida(self):
-        global Start
+        global Start, flag, flag_subida, flag_acomodacao, flag_overshoot
+        flag = True
+        flag_subida = True
         Start = True
+        flag_acomodacao = True
+        flag_overshoot = True
         self.atualiza()
         control = Controle()
         control.start()
@@ -521,15 +569,19 @@ class Interface(BoxLayout):
     ##ATUALIZAR OVERSHOOT E TEMPOS AQUI
     ##usar essa funcao com timer para fazer update dos itens junto com a imagem do tanque
     def update_nivel(self, *args):
-        global nivel_tanque, overshoot
+        global nivel_tanque, overshoot, overshootPercentual, tempo_subida, tempo_acomodacao
         nivel = (nivel_tanque / 30) * 100
+        if(nivel>100):
+            nivel=100
         self.ids.nivel_tanque1.value = nivel
 
-        overshoot = round(overshoot, 3)
-        self.ids.overshoot.text = str(overshoot)
+        overshootPercentual = round(overshootPercentual, 2)
+        self.ids.overshoot.text = str(overshootPercentual)
+        self.ids.tempo_subida.text = str(round(tempo_subida,3))
+        self.ids.tempo_acomodacao.text = str(round(tempo_acomodacao,3))
 
 
-    ##funcao caso queira adequar os ranges de x:
+        ##funcao caso queira adequar os ranges de x:
     def update_xaxis(self, *args):
         global x_axis_range
         if (x_axis_range > 80):
@@ -550,7 +602,7 @@ class Interface(BoxLayout):
 
 
     def stop(self):
-        global Start, lista_entrada, lista_saida, lista_setpoint, lista_altura
+        global Start, lista_entrada, lista_saida, lista_setpoint, lista_altura, overshoot, overshootPercentual
         self.clockSaida.cancel()
         self.clockEntrada.cancel()
         self.clockUpdateX.cancel()
@@ -571,9 +623,15 @@ class Interface(BoxLayout):
         lista_saida = [(0, 0)]
         lista_setpoint = [(0, 0)]
         lista_altura = [(0, 0)]
+        overshootPercentual = 0.0
+        overshoot = 0.0
+        self.ids.overshoot.text = "-"
+        self.ids.nivel_tanque1.value = 0.0
+        self.ids.tempo_subida.text = "-"
+        self.ids.tempo_acomodacao.text = "-"
 
 
-##-----------------------------------------------------------------------------
+    ##-----------------------------------------------------------------------------
 
 class ControleApp(App):
     def build(self):
