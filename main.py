@@ -89,6 +89,7 @@ channel = 0
 ##Variaveis de resposta do Sistema
 overshoot = 0.0
 overshootPercentual = 0.0
+antigo_setPoint = 0.0
 tempo_subida = 0.0
 tempo_acomodacao = 0.0
 #Variaveis do tempo de subida
@@ -219,11 +220,11 @@ def atualizaListas(tempo, tensao_saida, tensao_sensor, altura, set_point):
 
 
 def calculaOvershoot(set_point,current_value):
-    global overshoot, overshootPercentual
+    global overshoot, overshootPercentual, antigo_setPoint
     if(current_value>overshoot and flag_overshoot):
         overshoot = current_value
         if(current_value>set_point):
-            overshootPercentual = round(abs(((current_value - set_point)/set_point)*100), 2)
+            overshootPercentual = round(abs((((current_value - antigo_setPoint)-(set_point - antigo_setPoint))/(set_point - antigo_setPoint))*100), 2)
 
 def calculaTempoSubida(set_point, current_value, t):
     global flag, tempo_subida, tempo_final, tempo_inicial, flag_subida
@@ -429,7 +430,7 @@ class Interface(BoxLayout):
 
     ##ATUALIZAR VALORES
     def atualiza(self):
-        global tensao_min, tensao_max, offset, valor_entrada, periodo, flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint
+        global tensao_min, tensao_max, offset, valor_entrada, periodo, flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint, antigo_setPoint
         global Kp, Ki, Kd, taui, taud
         if((valor_entrada!=float(self.ids.tensaoentrada.text)) or (offset!=float(self.ids.offset.text))):
             flag = True
@@ -437,6 +438,8 @@ class Interface(BoxLayout):
             flag_acomodacao = True
             flag_overshoot = True
             flag_mudou_setPoint = True
+            if(valor_entrada!=float(self.ids.tensaoentrada.text)):
+                antigo_setPoint = valor_entrada
         tensao_min = float(self.ids.tensaomin.text)
         tensao_max = float(self.ids.tensaomax.text)
         offset = float(self.ids.offset.text)
@@ -602,7 +605,7 @@ class Interface(BoxLayout):
 
 
     def stop(self):
-        global Start, lista_entrada, lista_saida, lista_setpoint, lista_altura, overshoot, overshootPercentual
+        global Start, lista_entrada, lista_saida, lista_setpoint, lista_altura, overshoot, overshootPercentual, antigo_setPoint
         self.clockSaida.cancel()
         self.clockEntrada.cancel()
         self.clockUpdateX.cancel()
@@ -625,6 +628,7 @@ class Interface(BoxLayout):
         lista_altura = [(0, 0)]
         overshootPercentual = 0.0
         overshoot = 0.0
+        antigo_setPoint = 0.0
         self.ids.overshoot.text = "-"
         self.ids.nivel_tanque1.value = 0.0
         self.ids.tempo_subida.text = "-"
