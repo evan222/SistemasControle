@@ -327,6 +327,64 @@ Interface:
 				border_color: 0,0,0,1.0
 				mesh_rect_color: 0,0,0,1.0
 				label_options:{'color': (0,0,0,1)}
+
+			BoxLayout:
+				canvas.before:
+					Color:
+						rgba: 0, 0, 0, 1
+					Rectangle:
+						pos: self.pos
+						size: self.size
+				size_hint: [1,.1]
+				orientation: "horizontal"
+
+				Label:
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text: 'Legenda:'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 0,0,1,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text_size: self.size
+					valign: 'middle'
+					halign: 'center'
+					text: 'Set Point'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 1,0,0,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text_size: self.size
+					valign: 'middle'
+					halign: 'center'
+					text: 'Tensão'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 0,128,0,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text_size: self.size
+					valign: 'middle'
+					halign: 'center'
+					text: 'Altura'
 		
 		
 		#LEGENDAS E TANQUES
@@ -334,7 +392,7 @@ Interface:
 		BoxLayout:
 			canvas.before:
 				Color:
-					rgba: 0, 0, .3, 1
+					rgba: 0, 0, 0, .5
 				Rectangle:
 					pos: self.pos
 					size: self.size
@@ -374,7 +432,7 @@ Interface:
 							pos: self.pos
 							size: self.size
 							source: 'tanque.png'
-					#size_hint: [1,.7]
+					#size_hint: [1,.9]
 					orientation: "vertical"
 					
 					
@@ -386,13 +444,13 @@ Interface:
 							id: nivel_tanque1
 							animated: True
 							value: 0
-							color: 0, 128, 0, 1.0
+							color: 0, 0, 128, .4
 							background_color: .5, .5, .5, 1
 							orientation: 'bt'
 
 			
 			GridLayout:
-				size_hint: [1, .5]
+				size_hint: [1, .4]
 				rows: 3
 				cols: 2
 				Label:
@@ -403,6 +461,7 @@ Interface:
 					disabled: False
 					readonly: True
 					#input_filter: 'float'
+					text_size: self.size
 					text: '-'
 				Label:
 					text: "Tempo Subida: (s)"
@@ -412,6 +471,7 @@ Interface:
 					disabled: False
 					readonly: True
 					#input_filter: 'float'
+					text_size: self.size
 					text: '-'
 				Label:
 					#text_size: self.size
@@ -422,54 +482,7 @@ Interface:
 					disabled: False
 					readonly: True
 					#input_filter: 'float'
+					text_size: self.size
 					text: '-'
 
 			
-			BoxLayout:
-				canvas.before:
-					Color:
-						rgba: 0, 0, 0, 1
-					Rectangle:
-						pos: self.pos
-						size: self.size
-				size_hint: [1,.3]
-				orientation: "vertical"
-				
-				Label:
-					id:legenda
-					bold: True
-					color: 1,1,1,1.0
-					text: 'Legenda:'
-				Label:
-					canvas.before:
-						Color:
-							rgba: 0,0,1,1.0
-						Rectangle:
-							pos: self.pos
-							size: self.size
-					id:legenda
-					bold: True
-					color: 1,1,1,1.0
-					text: 'Set Point'
-				Label:
-					canvas.before:
-						Color:
-							rgba: 1,0,0,1.0
-						Rectangle:
-							pos: self.pos
-							size: self.size
-					id:legenda
-					bold: True
-					color: 1,1,1,1.0
-					text: 'Tensão'
-				Label:
-					canvas.before:
-						Color:
-							rgba: 0,128,0,1.0
-						Rectangle:
-							pos: self.pos
-							size: self.size
-					id:legenda
-					bold: True
-					color: 1,1,1,1.0
-					text: 'Altura'
