@@ -352,14 +352,14 @@ Interface:
 					state: 'down'
 					background_normal: 'ondaup.png'
 					background_down: 'ondadown.png'
-					#on_press: root.tanque1()
+					on_press: root.tanque1()
 				ToggleButton:
 					id: tanque2
 					group: 'tanques'
 					text: "Tanque 2"
 					background_normal: 'ondaup.png'
 					background_down: 'ondadown.png'
-					#on_press: root.tanque2()		
+					on_press: root.tanque2()
 			
 			
 			BoxLayout:
@@ -382,39 +382,21 @@ Interface:
 						orientation: "horizontal"
 						BoxLayout:
 							size_hint: [.3,1]
-						Button:
-							size_hint: [.7,1]
-							##FALTA MUDAR O TAMANHO DESSE BOTAO DE ACORDO COM A ALTURA
-							##E TAMBEM A COR DELE
-				
-				BoxLayout:
-					canvas.before:
-						Color:
-							rgba: 1, 1, 1, 1
-						Rectangle:
-							pos: self.pos
-							size: self.size
-							source: 'tanque.png'
-					#size_hint: [1,.7]
-					orientation: "vertical"
-					
-					
-					BoxLayout:
-						orientation: "horizontal"
-						BoxLayout:
-							size_hint: [.3,1]
-						Button:
-							size_hint: [.7,1]
-							##FALTA MUDAR O TAMANHO DESSE BOTAO DE ACORDO COM A ALTURA
-							##E TAMBEM A COR DELE	
-			
+						Bar:
+							id: nivel_tanque1
+							animated: True
+							value: 0
+							color: 0, 128, 0, 1.0
+							background_color: .5, .5, .5, 1
+							orientation: 'bt'
+
 			
 			GridLayout:
 				size_hint: [1, .5]
 				rows: 3
 				cols: 2
 				Label:
-					text: "Overshoot:"
+					text: "Overshoot: (%)"
 				TextInput: 
 					id: overshoot
 					multiline: False
@@ -423,7 +405,7 @@ Interface:
 					#input_filter: 'float'
 					text: '-'
 				Label:
-					text: "Tempo de Subida: "
+					text: "Tempo Subida: (s)"
 				TextInput: 
 					id: tempo_subida
 					multiline: False
@@ -433,7 +415,7 @@ Interface:
 					text: '-'
 				Label:
 					#text_size: self.size
-					text: "Tempo de Acomodação:"
+					text: "Tempo Acomodação: (s)"
 				TextInput: 
 					id: tempo_acomodacao
 					multiline: False
@@ -441,9 +423,7 @@ Interface:
 					readonly: True
 					#input_filter: 'float'
 					text: '-'
-			
-			
-			
+
 			
 			BoxLayout:
 				canvas.before:
