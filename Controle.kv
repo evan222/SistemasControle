@@ -141,7 +141,7 @@ Interface:
 					TextInput: 
 						id: tensaomin
 						multiline: False
-						input_filter: 'float'
+						#input_filter: 'float'
 						text: '-4'
 						#off_text: root.tensao_min(tensaomin.text)
 					Label:
@@ -152,13 +152,13 @@ Interface:
 						multiline: False
 						#readonly: True
 						text: '0'
-						input_filter: 'float'
+						#input_filter: 'float'
 						#off_text: root.kp_in(kp.text)
 						
 					TextInput: 
 						id: tensaomax
 						multiline: False
-						input_filter: 'float'
+						#input_filter: 'float'
 						text: '4'
 						#off_text: root.tensao_max(tensaomax.text)
 					ToggleButton:
@@ -175,13 +175,13 @@ Interface:
 						#readonly: True
 						disabled: True
 						text: '0'
-						input_filter: 'float'
+						#input_filter: 'float'
 						#off_text: root.ki_in(ki.text)
 						
 					TextInput: 
 						id: tensaoentrada
 						multiline: False
-						input_filter: 'float'
+						#input_filter: 'float'
 						text: '0'
 						#off_text: root.tensaoentrada(tensaoentrada.text)	
 					ToggleButton:
@@ -197,7 +197,7 @@ Interface:
 						multiline: False
 						disabled: True
 						#readonly: True
-						input_filter: 'float'
+						#input_filter: 'float'
 						text: '0'
 						#off_text: root.kd_in(kd.text)
 						
@@ -219,14 +219,14 @@ Interface:
 						multiline: False
 						disabled: True
 						#readonly: True
-						input_filter: 'float'
+						#input_filter: 'float'
 						text: '0'
 						#off_text: root.taui_in(taui.text)
 						
 					TextInput: 
 						id: periodo
 						multiline: False
-						input_filter: 'float'
+						#input_filter: 'float'
 						disabled: True
 						text: '10'
 						#off_text: root.periodo(periodo.text)	
@@ -244,7 +244,7 @@ Interface:
 						multiline: False
 						disabled: True
 						text: '0'
-						input_filter: 'float'
+						#input_filter: 'float'
 						#off_text: root.taud_in(taud.text)					
 					
 					
@@ -359,7 +359,7 @@ Interface:
 					text: "Tanque 2"
 					background_normal: 'ondaup.png'
 					background_down: 'ondadown.png'
-					on_press: root.tanque2()		
+					on_press: root.tanque2()
 			
 			
 			BoxLayout:
@@ -389,30 +389,7 @@ Interface:
 							color: 0, 128, 0, 1.0
 							background_color: .5, .5, .5, 1
 							orientation: 'bt'
-				
-				BoxLayout:
-					canvas.before:
-						Color:
-							rgba: 1, 1, 1, 1
-						Rectangle:
-							pos: self.pos
-							size: self.size
-							source: 'tanque.png'
-					#size_hint: [1,.7]
-					orientation: "vertical"
-					
-					BoxLayout:
-						orientation: "horizontal"
-						BoxLayout:
-							size_hint: [.3,1]
-						Bar:
-							id: nivel_tanque2
-							animated: True
-							value: 0
-							color: 0, 128, 0, 1.0
-							background_color: .5, .5, .5, 1
-							orientation: 'bt'
-			
+
 			
 			GridLayout:
 				size_hint: [1, .5]
@@ -425,7 +402,7 @@ Interface:
 					multiline: False
 					disabled: False
 					readonly: True
-					input_filter: 'float'
+					#input_filter: 'float'
 					text: '-'
 				Label:
 					text: "Tempo de Subida: "
@@ -434,7 +411,7 @@ Interface:
 					multiline: False
 					disabled: False
 					readonly: True
-					input_filter: 'float'
+					#input_filter: 'float'
 					text: '-'
 				Label:
 					#text_size: self.size
@@ -444,11 +421,9 @@ Interface:
 					multiline: False
 					disabled: False
 					readonly: True
-					input_filter: 'float'
+					#input_filter: 'float'
 					text: '-'
-			
-			
-			
+
 			
 			BoxLayout:
 				canvas.before:
