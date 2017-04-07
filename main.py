@@ -48,12 +48,13 @@ flag_pid = 0
 ##flag_pid=3 -> controle PID
 ##flag_pid=4 -> controle PI-D
 ##"""
-
 flag = True # flag do tempo de subida
 flag_subida = True
 flag_overshoot = True # flag do overshoot
-flag_acomodacao = True # flag de acomodacao
+flag_overshoot_subida = True
 flag_mudou_setPoint =  False
+flag_acomodacao = True
+flag_verifica_overshoot = True
 
 valor_entrada = 0
 periodo = 1
@@ -91,11 +92,16 @@ channel = 0
 ##Variaveis de resposta do Sistema
 overshoot = 0.0
 overshootPercentual = 0.0
+antigo_setPoint = 0.0
 tempo_subida = 0.0
 tempo_acomodacao = 0.0
-# Variaveis do tempo de subida
+tempo_acomodacao_inicial = 0.0
+valor_passado = 0.0
+#Variaveis do tempo de subida
 tempo_final = 0.0
 tempo_inicial = 0.0
+
+
 
 ##-------------------------------------------
 def readSensor(channel):
@@ -217,39 +223,79 @@ def atualizaListas(tempo, tensao_saida, tensao_sensor, altura, set_point):
     else:
         contador = contador + 1
 
-def calculaOvershoot(set_point, current_value):
-    global overshoot, overshootPercentual
-    if (current_value > overshoot and flag_overshoot):
-        overshoot = current_value
-        if (current_value > set_point):
-            overshootPercentual = round(abs(((current_value - set_point) / set_point) * 100), 2)
+
+def calculaOvershoot(set_point,current_value):
+    global overshoot, overshootPercentual, antigo_setPoint, flag_overshoot_subida, flag_overshoot, flag_verifica_overshoot, valor_passado
+    if(flag_verifica_overshoot):
+        valor_passado = current_value
+        flag_verifica_overshoot = False
+
+    if(current_value-valor_passado>0 and flag_overshoot and not(flag_verifica_overshoot)):
+        flag_overshoot_subida = True
+        if(current_value>overshoot):
+            overshoot = current_value
+            if(current_value>set_point):
+                if(set_point!=antigo_setPoint):
+                    overshootPercentual = round(abs(((current_value-set_point)/(set_point - antigo_setPoint))*100), 2)
+                else:
+                    overshootPercentual = round(abs(((current_value-set_point)/(set_point))*100), 2)
+                    flag_overshoot_subida = True
+    if(current_value-valor_passado<0 and flag_overshoot and not(flag_verifica_overshoot)):
+        flag_overshoot_subida = False
+        if(current_value<overshoot):
+            overshoot = current_value
+            if(current_value<set_point):
+                if(set_point!=antigo_setPoint):
+                    overshootPercentual = round(abs(((current_value-set_point)/(set_point - antigo_setPoint))*100), 2)
+                    flag_overshoot_subida = False
+                else:
+                    overshootPercentual = round(abs(((current_value-set_point)/(set_point))*100), 2)
+                    flag_overshoot_subida = False
 
 def calculaTempoSubida(set_point, current_value, t):
-    global flag, tempo_subida, tempo_final, tempo_inicial, flag_subida
-    if (current_value < set_point and current_value > (set_point - set_point * 0.05) and flag_subida):
-        tempo_final = t
-        tempo_subida = tempo_final - tempo_inicial
-        flag_subida = False
-    elif (current_value > (set_point * 0.05) and flag):
-        tempo_inicial = t
-        flag = False
+    global flag, tempo_subida, tempo_final, tempo_inicial, flag_subida, flag_overshoot_subida, flag_overshoot
+    if(flag_overshoot_subida):
+        if(current_value<set_point and current_value>(set_point-set_point*0.05) and flag_subida):
+            tempo_final = t
+            tempo_aux = tempo_final - tempo_inicial
+            if(tempo_aux != 0.0):
+                tempo_subida = tempo_aux
+                flag_subida = False
+                flag_overshoot = True
+        elif(current_value>(set_point*0.05) and flag):
+            tempo_inicial=t
+            flag=False
+    elif(not(flag_overshoot_subida)):
+        if(current_value>set_point and current_value<(set_point+set_point*0.05) and flag_subida):
+            tempo_final = t
+            tempo_aux = tempo_final - tempo_inicial
+            if(tempo_aux != 0.0):
+                tempo_subida = tempo_aux
+                flag_subida = False
+                flag_overshoot = True
+        elif(current_value>(set_point*0.05) and flag):
+            tempo_inicial=t
+            flag=False
 
 def calculaTempoAcomodacao(set_point, current_value, t):
-    global flag_subida, tempo_acomodacao, tempo_inicial, flag_acomodacao, tempo_final, flag_overshoot
-    if (((current_value < set_point and current_value > (set_point - set_point * 0.05)) or (
-        current_value > set_point and current_value < (set_point + set_point * 0.05))) and flag_acomodacao):
-        if ((t - tempo_final) > 5.0 and flag_subida == False):
-            tempo_acomodacao = t - tempo_inicial
-            flag_acomodacao = False
-            flag_overshoot = False
+    global flag_subida, tempo_acomodacao, tempo_inicial, tempo_final, flag_overshoot, flag_acomodacao, tempo_acomodacao_inicial
+    if((current_value>(set_point-set_point*0.05) and current_value<(set_point+set_point*0.05)) and flag_acomodacao):
+        flag_acomodacao = False
+        tempo_acomodacao_inicial = t - tempo_inicial
+    if((current_value<(set_point-set_point*0.05) or current_value>(set_point+set_point*0.05)) and not(flag_acomodacao)):
+        flag_acomodacao = True
+        tempo_acomodacao_inicial = 0.0
+    if((current_value>(set_point-set_point*0.05) and current_value<(set_point+set_point*0.05)) and abs((t-tempo_inicial) - tempo_acomodacao_inicial)>2.0):
+        tempo_acomodacao =  tempo_acomodacao_inicial
+        flag_overshoot = False
+        flag_acomodacao = False
 
 def atualizaTempos(t):
     global flag_mudou_setPoint, flag, tempo_inicial
-    if (flag_mudou_setPoint):
+    if(flag_mudou_setPoint):
         tempo_inicial = t
         flag_mudou_setPoint = False
         flag = False
-
 
 
 ##CONTROLE:
@@ -260,7 +306,7 @@ class Controle(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        global x_axis_range, Start, nivel_tanque, channel, overshoot
+        global x_axis_range, Start, nivel_tanque, channel, overshoot, overshootPercentual
         global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd, taud, taui, PID
 
         tensao = 0.0
@@ -292,8 +338,6 @@ class Controle(threading.Thread):
                 nivel_tanque = altura  # atualiza o nivel do tanque
                 x_axis_range = float(t)  # atualiza o range do grafico
                 atualizaListas(t, v, read, altura, set_point) #atualiza os valores plotados
-                #calculaOvershoot(set_point, altura)
-
             elif (flag_malha == 1):
                 if (flag_signal == 1):
                     set_point = Signal.waveStep(valor_entrada, offset)
@@ -310,8 +354,8 @@ class Controle(threading.Thread):
                 tensao = writeTensao(0, saida)
                 v = float(quanser.getTension())
                 read = float(readSensor(channel))
-                nivel_tanque = altura #atualiza o nivel do tanque
-                x_axis_range = float(t) #atualiza o range do grafico
+                nivel_tanque = altura  # atualiza o nivel do tanque
+                x_axis_range = float(t)  # atualiza o range do grafico
                 atualizaListas(t, v, read, altura, set_point) #atualiza os valores plotados
                 calculaOvershoot(set_point, altura)
                 atualizaTempos(t)
@@ -428,15 +472,19 @@ class Interface(BoxLayout):
     def atualiza(self):
         global tensao_min, tensao_max, offset, valor_entrada, periodo
         global Kp, Ki, Kd, taui, taud
-        global flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint
-
-        if ((valor_entrada != float(self.ids.tensaoentrada.text)) or (offset != float(self.ids.offset.text))):
+        global flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint, antigo_setPoint, flag_verifica_overshoot
+        global tempo_subida, tempo_acomodacao, overshootPercentual
+        if((valor_entrada!=float(self.ids.tensaoentrada.text)) or (offset!=float(self.ids.offset.text))):
             flag = True
             flag_subida = True
             flag_acomodacao = True
             flag_overshoot = True
             flag_mudou_setPoint = True
-
+            flag_verifica_overshoot = True
+            antigo_setPoint = valor_entrada+offset
+            tempo_subida = 0.0
+            tempo_acomodacao = 0.0
+            overshootPercentual = 0.0
         tensao_min = float(self.ids.tensaomin.text)
         tensao_max = float(self.ids.tensaomax.text)
         offset = float(self.ids.offset.text)
@@ -453,6 +501,9 @@ class Interface(BoxLayout):
         Ki = float(self.ids.ki.text)
         taui = float(self.ids.taui.text)
         taud = float(self.ids.taud.text)
+        self.ids.overshoot.text = "-"
+        self.ids.tempo_subida.text = "-"
+        self.ids.tempo_acomodacao.text = "-"
         if (self.ids.kd_label.state == 'down'):
             self.kd_in()
         if (self.ids.ki_label.state == 'down'):
@@ -546,12 +597,12 @@ class Interface(BoxLayout):
     ##FUNCOES PARA CONTROLE DA INTERFACE E CHAMADA DO PROGRAMA DE CONTROLE:
 
     def startsaida(self):
-        global Start, flag, flag_subida, flag_acomodacao, flag_overshoot
+        global Start, flag, flag_subida, flag_acomodacao, flag_overshoot, flag_verifica_overshoot
         flag = True
         flag_subida = True
-        Start = True
         flag_acomodacao = True
         flag_overshoot = True
+        flag_verifica_overshoot = True
         Start = True
         self.atualiza()
         control = Controle()
@@ -571,19 +622,17 @@ class Interface(BoxLayout):
     ##usar essa funcao com timer para fazer update dos itens junto com a imagem do tanque
     def update_nivel(self, *args):
         global nivel_tanque, overshoot, overshootPercentual, tempo_subida, tempo_acomodacao
-
         nivel = (nivel_tanque / 30) * 100
-        if (nivel <= 0):
-            nivel = 0.0
-        elif (nivel >100):
-            nivel = 100.0
+        if(nivel>100):
+            nivel=100.0
+        if(nivel<0):
+            nivel=0.0
         self.ids.nivel_tanque1.value = nivel
 
         overshootPercentual = round(overshootPercentual, 2)
-        self.ids.overshoot.text = str(overshoot)
         self.ids.overshoot.text = str(overshootPercentual)
-        self.ids.tempo_subida.text = str(round(tempo_subida, 3))
-        self.ids.tempo_acomodacao.text = str(round(tempo_acomodacao, 3))
+        self.ids.tempo_subida.text = str(round(tempo_subida,3))
+        self.ids.tempo_acomodacao.text = str(round(tempo_acomodacao,3))
 
 
     ##funcao caso queira adequar os ranges de x:
@@ -608,7 +657,8 @@ class Interface(BoxLayout):
 
     def stop(self):
         global Start, lista_entrada, lista_saida, lista_setpoint, lista_altura
-        global overshoot, overshootPercentual
+        global overshoot, overshootPercentual, antigo_setPoint
+        global tempo_subida, tempo_acomodacao, tempo_acomodacao_inicial, tempo_final, tempo_inicial
         self.clockSaida.cancel()
         self.clockEntrada.cancel()
         self.clockUpdateX.cancel()
@@ -631,13 +681,19 @@ class Interface(BoxLayout):
         lista_altura = [(0, 0)]
         overshootPercentual = 0.0
         overshoot = 0.0
+        antigo_setPoint = 0.0
         self.ids.overshoot.text = "-"
         self.ids.nivel_tanque1.value = 0.0
         self.ids.tempo_subida.text = "-"
         self.ids.tempo_acomodacao.text = "-"
+        tempo_subida = 0.0
+        tempo_acomodacao = 0.0
+        tempo_acomodacao_inicial = 0.0
+        tempo_final = 0.0
+        tempo_inicial = 0.0
 
 
-##-----------------------------------------------------------------------------
+    ##-----------------------------------------------------------------------------
 
 class ControleApp(App):
     def build(self):
