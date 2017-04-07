@@ -13,8 +13,8 @@ def sign(x):
         return 1.0
 
 # onda degrau
-def waveStep(amplitude):
-    return float(amplitude)
+def waveStep(amplitude, offset):
+    return float(amplitude+offset)
 
 
 # onda senoidal
