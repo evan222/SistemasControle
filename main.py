@@ -33,6 +33,9 @@ import Signal
 import time
 
 ##VARIAVEIS GLOBAIS:
+
+flag_controle = 0 #comeca com controle direto
+
 flag_malha = 0  # 0 = malha aberta / 1  = malha fechada
 flag_signal = 1
 ## "1 - Degrau\n"
@@ -391,6 +394,10 @@ class Interface(BoxLayout):
 
     ##FUNCOES DOS BOTOES:
 
+    ##SUGESTOES:
+    ## 1) Retirar as funoces de malha e substituir pelas funcoes de controle abaixo.
+
+##A FUNCAO ABAIXO SE TORNOU OBSOLETA (malha):
     ##MALHA
     def MA(self):
         global flag_malha
@@ -401,6 +408,15 @@ class Interface(BoxLayout):
         flag_malha = 1
         self.ids.malha.text = "Malha Fechada"
 
+    ##CONTROLE
+    def CD(self):
+        global flag_controle
+        flag_controle = 0
+    def CC(self):
+        global flag_controle
+        flag_controle = 1
+
+##ESTA FUNCAO TAMBEM TORNOU-SE OBSOLETA (tanques):
     ##TANQUES
     def tanque1(self):
         global channel

@@ -1,7 +1,7 @@
 #:kivy 1.0.9
 
 Interface:
-	#amplitude: amplitude
+
 	BoxLayout:
 		orientation: "horizontal"
 	#BOTOES
@@ -25,9 +25,7 @@ Interface:
                     TextInput:
                         id: tensaomax
                         multiline: False
-                        #input_filter: 'float'
                         text: '4'
-                        #off_text: root.tensao_max(tensaomax.text)
                     Label:
                         id: tensaominL
                         text: "Tensao Minima"
@@ -37,9 +35,28 @@ Interface:
                     TextInput:
                         id: tensaomin
                         multiline: False
-                        #input_filter: 'float'
                         text: '-4'
-                        #off_text: root.tensao_min(tensaomin.text)
+
+
+                #CONTROLE DIRETO OU INDIRETO
+                BoxLayout:
+                    size_hint: [1,1]
+                    orientation: "vertical"
+                    ToggleButton:
+                        id: controle_direto
+                        group: 'controle'
+                        state: 'down'
+                        background_normal: 'ondaup.png'
+                        background_down: 'ondadown.png'
+                        text: "Controle Direto"
+                        #on_press: root.CD()
+                    ToggleButton:
+                        id: controle_indireto
+                        group: 'controle'
+                        background_normal: 'ondaup.png'
+                        background_down: 'ondadown.png'
+                        text: "Controle Cascata"
+                        #on_press: root.CC()
 
                 #ONDA
                 BoxLayout:
@@ -89,18 +106,17 @@ Interface:
 				size_hint: [1,.8]
 				orientation: "horizontal"
 
-				#MALHA
+				#TANQUE
                 BoxLayout:
                     size_hint: [1,1]
                     orientation: "vertical"
 
                     Button:
-                        id: malha_in
+                        id: tanque1
                         state: 'down'
                         background_normal: 'ondaup.png'
                         background_down: 'ondadown.png'
-                        text: "Malha Interna"
-                        on_press: root.MA()
+                        text: "Tanque 1"
 
                     #PID
                     BoxLayout:
@@ -152,7 +168,7 @@ Interface:
                             cols: 1
                             Label:
                                 id: tensaoentradaL
-                                text: "Altura Desejada (cm)"
+                                text: "Setpoint (cm)"
                                 text_size: self.size
                                 valign: 'middle'
 					            halign: 'center'
@@ -279,13 +295,12 @@ Interface:
 					orientation: "vertical"
 
 					Button:
-						id: malha_ex
+						id: tanque2
 						#group: 'malha'
 						state: 'down'
 						background_normal: 'ondaup.png'
 						background_down: 'ondadown.png'
-						text: "Malha Externa"
-						on_press: root.MF()
+						text: "Tanque 2"
 
 					#PID
                     BoxLayout:
@@ -337,7 +352,7 @@ Interface:
                             cols: 1
                             Label:
                                 id: tensaoentradaL
-                                text: "Altura Desejada (cm)"
+                                text: "Setpoint (cm)"
                                 text_size: self.size
                                 valign: 'middle'
 					            halign: 'center'
@@ -459,9 +474,7 @@ Interface:
                                 text: '0'
 
 
-			
 
-					
 					
 			BoxLayout:
 				size_hint: [1,0.2]
@@ -489,8 +502,6 @@ Interface:
 					on_press: root.atualiza()	
 		
 		#Graficos
-		
-		
 		BoxLayout:
 			canvas.before:
 				Color:
