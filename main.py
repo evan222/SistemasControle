@@ -43,7 +43,9 @@ flag_signal = 1
 ## "3 - Onda Quadrada\n"
 ## "4 - Onda tipo dente de serra\n"	
 ## "5 - Sinal Aleatorio\n"
-flag_pid = 0
+flag_pid = 0   ##USADA APENAS PRA NAO DAR ERRO
+T1_flag_pid = 0
+T2_flag_pid = 0
 ##"""
 ##flag_pid=0 -> controle P
 ##flag_pid=1 -> controle PD
@@ -82,6 +84,16 @@ Kd = 0.0
 Kp = 0.0
 Ki = 0.0
 PID = 0.0
+T1_taud = 0.0
+T1_taui = 0.0
+T1_Kd = 0.0
+T1_Kp = 0.0
+T1_Ki = 0.0
+T2_taud = 0.0
+T2_taui = 0.0
+T2_Kd = 0.0
+T2_Kp = 0.0
+T2_Ki = 0.0
 
 ##variaveis de controle da interface/sistema
 Start = False
@@ -408,13 +420,13 @@ class Controle(threading.Thread):
                 elif (flag_signal == 5):
                     set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
                 if(tipo_controle==0):
-                	altura = float(getAltura(channel))
-                	saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
+                    altura = float(getAltura(channel))
+                    saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
                 elif(tipo_controle==1):
-                	altura_tanque1 = float(getAltura(0))
-                	altura_tanque2 = float(getAltura(1))
-                	setpoint_ME = controlePID_K_Cascata(set_point, altura_tanque2, Kp, Kd, Ki, 0)
-                	saida = controlePID_K_Cascata(setpoint_ME, altura_tanque1, Kp, Kd, Ki, 1)
+                    altura_tanque1 = float(getAltura(0))
+                    altura_tanque2 = float(getAltura(1))
+                    setpoint_ME = controlePID_K_Cascata(set_point, altura_tanque2, Kp, Kd, Ki, 0)
+                    saida = controlePID_K_Cascata(setpoint_ME, altura_tanque1, Kp, Kd, Ki, 1)
                 tensao = writeTensao(0, saida)
                 v = float(quanser.getTension())
                 read = float(readSensor(channel))
@@ -509,46 +521,90 @@ class Interface(BoxLayout):
         self.ids.periodo.disabled = False
 
     ##CONTROLE
-    def do_p(self):
-        global flag_pid
-        self.ids.ki.disabled = True
-        self.ids.kd.disabled = True
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 0
-    def do_pd(self):
-        global flag_pid
-        self.ids.ki.disabled = True
-        self.ids.kd.disabled = False
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 1
-    def do_pi(self):
-        global flag_pid
-        self.ids.ki.disabled = False
-        self.ids.kd.disabled = True
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 2
-    def do_pid(self):
-        global flag_pid
-        self.ids.ki.disabled = False
-        self.ids.kd.disabled = False
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 3
-    def do_pi_d(self):
-        global flag_pid
-        self.ids.ki.disabled = False
-        self.ids.kd.disabled = False
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 4
+    ##TANQUE 1
+    def T1_do_p(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = True
+        self.ids.T1_kd.disabled = True
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 0
+    def T1_do_pd(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = True
+        self.ids.T1_kd.disabled = False
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 1
+    def T1_do_pi(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = False
+        self.ids.T1_kd.disabled = True
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 2
+    def T1_do_pid(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = False
+        self.ids.T1_kd.disabled = False
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 3
+    def T1_do_pi_d(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = False
+        self.ids.T1_kd.disabled = False
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 4
+    ##TANQUE 2
+    def T2_do_p(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = True
+        self.ids.T2_kd.disabled = True
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 0
+
+    def T2_do_pd(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = True
+        self.ids.T2_kd.disabled = False
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 1
+
+    def T2_do_pi(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = False
+        self.ids.T2_kd.disabled = True
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 2
+
+    def T2_do_pid(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = False
+        self.ids.T2_kd.disabled = False
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 3
+
+    def T2_do_pi_d(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = False
+        self.ids.T2_kd.disabled = False
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 4
+
+
 
     ##ATUALIZAR VALORES
     def atualiza(self):
         global tensao_min, tensao_max, offset, valor_entrada, periodo
         global Kp, Ki, Kd, taui, taud
+        global T1_Kp, T1_Ki, T1_Kd, T1_taui, T1_taud, T2_Kp, T2_Ki, T2_Kd, T2_taui, T2_taud
         global flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint, antigo_setPoint, flag_verifica_overshoot
         global tempo_subida, tempo_acomodacao, overshootPercentual
         if((valor_entrada!=float(self.ids.tensaoentrada.text)) or (offset!=float(self.ids.offset.text))):
@@ -573,22 +629,35 @@ class Interface(BoxLayout):
         ##        print "entrada: ", valor_entrada
         ##        print "periodo: ", periodo
         ##ATE AQUI OK
-        Kp = float(self.ids.kp.text)
-        Kd = float(self.ids.kd.text)
-        Ki = float(self.ids.ki.text)
-        taui = float(self.ids.taui.text)
-        taud = float(self.ids.taud.text)
+        T1_Kp = float(self.ids.T1_kp.text)
+        T1_Kd = float(self.ids.T1_kd.text)
+        T1_Ki = float(self.ids.T1_ki.text)
+        T1_taui = float(self.ids.T1_taui.text)
+        T1_taud = float(self.ids.T1_taud.text)
+        T2_Kp = float(self.ids.T2_kp.text)
+        T2_Kd = float(self.ids.T2_kd.text)
+        T2_Ki = float(self.ids.T2_ki.text)
+        T2_taui = float(self.ids.T2_taui.text)
+        T2_taud = float(self.ids.T2_taud.text)
         self.ids.overshoot.text = "-"
         self.ids.tempo_subida.text = "-"
         self.ids.tempo_acomodacao.text = "-"
-        if (self.ids.kd_label.state == 'down'):
-            self.kd_in()
-        if (self.ids.ki_label.state == 'down'):
-            self.ki_in()
-        if (self.ids.taud_label.state == 'down'):
-            self.taud_in()
-        if (self.ids.taui_label.state == 'down'):
-            self.taui_in()
+        if (self.ids.T1_kd_label.state == 'down'):
+            self.T1_kd_in()
+        if (self.ids.T1_ki_label.state == 'down'):
+            self.T1_ki_in()
+        if (self.ids.T1_taud_label.state == 'down'):
+            self.T1_taud_in()
+        if (self.ids.T1_taui_label.state == 'down'):
+            self.T1_taui_in()
+        if (self.ids.T2_kd_label.state == 'down'):
+            self.T2_kd_in()
+        if (self.ids.T2_ki_label.state == 'down'):
+            self.T2_ki_in()
+        if (self.ids.T2_taud_label.state == 'down'):
+            self.T2_taud_in()
+        if (self.ids.T2_taui_label.state == 'down'):
+            self.T2_taui_in()
         ##        print "kp: ", Kp
         ##        print "kd: ", Ki
         ##        print "ki: ", Kd
@@ -599,77 +668,149 @@ class Interface(BoxLayout):
     ##RETIREI A FUNCAO KP_IN POIS ELA TORNOU-SE OBSOLETA (E ESTA BUGANDO OS VALORES DOS TAUS)
 
     ##FUNCOES QUE ATUALIZA K'S E TAUS
-    def kd_in(self):
-        global Kp, Kd, taud
+    ##TANQUE 1
+    def T1_kd_in(self):
+        global T1_Kp, T1_Kd, T1_taud
         try:
-            Kd = float(self.ids.kd.text)
+            T1_Kd = float(self.ids.T1_kd.text)
         except:
-            Kd = 0.0
+            T1_Kd = 0.0
         try:
-            taud = calculaTauD(Kp, Kd)
-            self.ids.taud.text = str(taud)
+            T1_taud = calculaTauD(T1_Kp, T1_Kd)
+            self.ids.T1_taud.text = str(T1_taud)
         except:
-            self.ids.taud.text = "0.0"
+            self.ids.T1_taud.text = "0.0"
 
-    def ki_in(self):
-        global Kp, taui, Ki
+    def T1_ki_in(self):
+        global T1_Kp, T1_taui, T1_Ki
         try:
-            Ki = float(self.ids.ki.text)
+            T1_Ki = float(self.ids.T1_ki.text)
         except:
-            Ki = 0.0
+            T1_Ki = 0.0
         try:
-            taui = calculaTauI(Kp, Ki)
-            self.ids.taui.text = str(taui)
+            T1_taui = calculaTauI(T1_Kp, T1_Ki)
+            self.ids.T1_taui.text = str(T1_taui)
         except:
-            self.ids.taui.text = "0.0"
+            self.ids.T1_taui.text = "0.0"
 
-    def taud_in(self):
-        global Kp, Kd, taud
+    def T1_taud_in(self):
+        global T1_Kp, T1_Kd, T1_taud
         try:
-            taud = float(self.ids.taud.text)
+            T1_taud = float(self.ids.T1_taud.text)
         except:
-            taud = 0.0
+            T1_taud = 0.0
         try:
-            Kd = calculaKD(taud, Kp)
-            self.ids.kd.text = str(Kd)
+            T1_Kd = calculaKD(T1_taud, T1_Kp)
+            self.ids.T1_kd.text = str(T1_Kd)
         except:
-            self.ids.kd.text = "0.0"
+            self.ids.T1_kd.text = "0.0"
 
-    def taui_in(self):
-        global Kp, Ki, taui
+    def T1_taui_in(self):
+        global T1_Kp, T1_Ki, T1_taui
         try:
-            taui = float(self.ids.taui.text)
+            T1_taui = float(self.ids.T1_taui.text)
         except:
-            taui = 0.0
+            T1_taui = 0.0
         try:
-            Ki = calculaKI(taui, Kp)
-            self.ids.ki.text = str(Ki)
+            T1_Ki = calculaKI(T1_taui, T1_Kp)
+            self.ids.T1_ki.text = str(T1_Ki)
         except:
-            self.ids.ki.text = "0.0"
+            self.ids.T1_ki.text = "0.0"
+
+    ##TANQUE 2
+    def T2_kd_in(self):
+        global T2_Kp, T2_Kd, T2_taud
+        try:
+            T2_Kd = float(self.ids.T2_kd.text)
+        except:
+            T2_Kd = 0.0
+        try:
+            T2_taud = calculaTauD(T2_Kp, T2_Kd)
+            self.ids.T2_taud.text = str(T2_taud)
+        except:
+            self.ids.T2_taud.text = "0.0"
+
+    def T2_ki_in(self):
+        global T2_Kp, T2_taui, T2_Ki
+        try:
+            T2_Ki = float(self.ids.T2_ki.text)
+        except:
+            T2_Ki = 0.0
+        try:
+            T2_taui = calculaTauI(T2_Kp, T2_Ki)
+            self.ids.T2_taui.text = str(T2_taui)
+        except:
+            self.ids.T2_taui.text = "0.0"
+
+    def T2_taud_in(self):
+        global T2_Kp, T2_Kd, T2_taud
+        try:
+            T2_taud = float(self.ids.T2_taud.text)
+        except:
+            T2_taud = 0.0
+        try:
+            T2_Kd = calculaKD(T2_taud, T2_Kp)
+            self.ids.T2_kd.text = str(T2_Kd)
+        except:
+            self.ids.T2_kd.text = "0.0"
+
+    def T2_taui_in(self):
+        global T2_Kp, T2_Ki, T2_taui
+        try:
+            T2_taui = float(self.ids.T2_taui.text)
+        except:
+            T2_taui = 0.0
+        try:
+            T2_Ki = calculaKI(T2_taui, T2_Kp)
+            self.ids.T2_ki.text = str(T2_Ki)
+        except:
+            self.ids.T2_ki.text = "0.0"
+
 
     ##BOTOES QUE SELECIONAM K'S OU TAUS
-    def pressKD(self):
-        global flag_pid
-        if (flag_pid == 1 or flag_pid == 3 or flag_pid == 4):
-            self.ids.kd.disabled = False
-            self.ids.taud.disabled = True
-    def pressKI(self):
-        global flag_pid
-        if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
-            self.ids.ki.disabled = False
-            self.ids.taui.disabled = True
-    def pressTD(self):
-        global flag_pid
-        if (flag_pid == 1 or flag_pid == 3 or flag_pid == 4):
-            self.ids.kd.disabled = True
-            self.ids.taud.disabled = False
-    def pressTI(self):
-        global flag_pid
-        if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
-            self.ids.ki.disabled = True
-            self.ids.taui.disabled = False
+    ##TANQUE 1
+    def T1_pressKD(self):
+        global T1_flag_pid
+        if (T1_flag_pid == 1 or T1_flag_pid == 3 or T1_flag_pid == 4):
+            self.ids.T1_kd.disabled = False
+            self.ids.T1_taud.disabled = True
+    def T1_pressKI(self):
+        global T1_flag_pid
+        if (T1_flag_pid == 2 or T1_flag_pid == 3 or T1_flag_pid == 4):
+            self.ids.T1_ki.disabled = False
+            self.ids.T1_taui.disabled = True
+    def T1_pressTD(self):
+        global T1_flag_pid
+        if (T1_flag_pid == 1 or T1_flag_pid == 3 or T1_flag_pid == 4):
+            self.ids.T1_kd.disabled = True
+            self.ids.T1_taud.disabled = False
+    def T1_pressTI(self):
+        global T1_flag_pid
+        if (T1_flag_pid == 2 or T1_flag_pid == 3 or T1_flag_pid == 4):
+            self.ids.T1_ki.disabled = True
+            self.ids.T1_taui.disabled = False
+    ##TANQUE 2
+    def T2_pressKD(self):
+        global T2_flag_pid
+        if (T2_flag_pid == 1 or T2_flag_pid == 3 or T2_flag_pid == 4):
+            self.ids.T2_kd.disabled = False
+            self.ids.T2_taud.disabled = True
+    def T2_pressKI(self):
+        global T2_flag_pid
+        if (T2_flag_pid == 2 or T2_flag_pid == 3 or T2_flag_pid == 4):
+            self.ids.T2_ki.disabled = False
+            self.ids.T2_taui.disabled = True
+    def T2_pressTD(self):
+        global T2_flag_pid
+        if (T2_flag_pid == 1 or T2_flag_pid == 3 or T2_flag_pid == 4):
+            self.ids.T2_kd.disabled = True
+            self.ids.T2_taud.disabled = False
 
-
+    def T2_pressTI(self):
+        global T2_flag_pid
+        if (T2_flag_pid == 2 or T2_flag_pid == 3 or T2_flag_pid == 4):
+            self.ids.T2_ki.disabled = True
+            self.ids.T2_taui.disabled = False
 
     ##FUNCOES PARA CONTROLE DA INTERFACE E CHAMADA DO PROGRAMA DE CONTROLE:
 
