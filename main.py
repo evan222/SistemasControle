@@ -33,6 +33,9 @@ import Signal
 import time
 
 ##VARIAVEIS GLOBAIS:
+
+flag_controle = 0 #comeca com controle direto
+
 flag_malha = 0  # 0 = malha aberta / 1  = malha fechada
 flag_signal = 1
 ## "1 - Degrau\n"
@@ -55,6 +58,9 @@ flag_overshoot_subida = True
 flag_mudou_setPoint =  False
 flag_acomodacao = True
 flag_verifica_overshoot = True
+##Para controle simples: tipo_controle = 0
+##Para controle em cascata: tipo_controle = 1
+tipo_controle = 0
 
 valor_entrada = 0
 periodo = 1
@@ -211,6 +217,54 @@ def controlePID_K(set_point, current_value, Kp, Kd, Ki):
     # print "PID:" , PID
     return PID
 
+##Calculo controle PID no modelo Cascata:
+##tipo_malha = 0, se trata da malha externa
+##tipo_malha = 1, se trata da malha interna
+def controlePID_K_Cascata(set_point, current_value, Kp, Kd, Ki, tipo_malha):
+    # Declaracoes das variaveis globais
+    global Derivator, Integrator, Integrator_max, Integrator_min, flag_pid, PID
+
+    b = 1  # filtro na acao derivativa
+    h = 0.1
+
+    I_value = 0
+    D_value = 0
+
+    error = set_point - current_value
+    margem = abs((set_point - current_value) / set_point)
+
+    # print "error", error
+
+    P_value = Kp * error
+    if (flag_pid == 0 or flag_pid == 1):
+        Integrator = 0
+        I_value = 0
+    if (flag_pid == 0 or flag_pid == 2):
+        Derivator = 0
+        D_value = 0
+
+    if (flag_pid == 1 or flag_pid == 3):
+        if (margem <= 0.03):
+            b = 0.0
+        D_value = Kd * ((error - Derivator) / h) * b
+        Derivator = error
+    if (flag_pid == 4):
+        if (margem <= 0.03):
+            b = 0.0
+        D_value = Kd * ((current_value - Derivator) / h) * b
+        Derivator = current_value
+    if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
+        Integrator = Integrator + (Ki * error * h)
+        # print "integrador", Integrator
+        if Integrator > Integrator_max:
+            Integrator = Integrator_max
+        elif Integrator < Integrator_min:
+            Integrator = Integrator_min
+        I_value = Integrator
+
+    PID = P_value + D_value + I_value
+    # print "PID:" , PID
+    return PID
 
 def atualizaListas(tempo, tensao_saida, tensao_sensor, altura, set_point):
     global contador, lista_saida, lista_entrada, lista_altura, lista_setpoint
@@ -297,6 +351,10 @@ def atualizaTempos(t):
         flag_mudou_setPoint = False
         flag = False
 
+def setTipoControle(tipo):
+	global tipo_controle
+	if(tipo==0 or tipo==1):
+		tipo_controle = tipo
 
 ##CONTROLE:
 
@@ -349,8 +407,14 @@ class Controle(threading.Thread):
                     set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
                 elif (flag_signal == 5):
                     set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
-                altura = float(getAltura(channel))
-                saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
+                if(tipo_controle==0):
+                	altura = float(getAltura(channel))
+                	saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
+                elif(tipo_controle==1):
+                	altura_tanque1 = float(getAltura(0))
+                	altura_tanque2 = float(getAltura(1))
+                	setpoint_ME = controlePID_K_Cascata(set_point, altura_tanque2, Kp, Kd, Ki, 0)
+                	saida = controlePID_K_Cascata(setpoint_ME, altura_tanque1, Kp, Kd, Ki, 1)
                 tensao = writeTensao(0, saida)
                 v = float(quanser.getTension())
                 read = float(readSensor(channel))
@@ -391,6 +455,10 @@ class Interface(BoxLayout):
 
     ##FUNCOES DOS BOTOES:
 
+    ##SUGESTOES:
+    ## 1) Retirar as funoces de malha e substituir pelas funcoes de controle abaixo.
+
+##A FUNCAO ABAIXO SE TORNOU OBSOLETA (malha):
     ##MALHA
     def MA(self):
         global flag_malha
@@ -401,6 +469,15 @@ class Interface(BoxLayout):
         flag_malha = 1
         self.ids.malha.text = "Malha Fechada"
 
+    ##CONTROLE
+    def CD(self):
+        global flag_controle
+        flag_controle = 0
+    def CC(self):
+        global flag_controle
+        flag_controle = 1
+
+##ESTA FUNCAO TAMBEM TORNOU-SE OBSOLETA (tanques):
     ##TANQUES
     def tanque1(self):
         global channel
