@@ -103,6 +103,42 @@ Interface:
             ##---------------
 			#MALHA INTERNA
 			BoxLayout:
+				size_hint: [1,.1]
+				orientation: "horizontal"
+				Label:
+                    id: tensaoentrada_label
+                    text: "Setpoint (cm)"
+                    text_size: self.size
+                    valign: 'middle'
+                    halign: 'center'
+                TextInput:
+                    id: tensaoentrada
+                    multiline: False
+                    text: '0'
+                Label:
+                    id: offset_label
+                    text: "Offset"
+                    text_size: self.size
+                    valign: 'middle'
+                    halign: 'center'
+                TextInput:
+                    id: offset
+                    multiline: False
+                    text: '0'
+                Label:
+                    id: periodo_label
+                    text: "Periodo"
+                    text_size: self.size
+                    valign: 'middle'
+                    halign: 'center'
+                TextInput:
+                    id: periodo
+                    multiline: False
+                    disabled: True
+                    text: '10'
+
+
+			BoxLayout:
 				size_hint: [1,.8]
 				orientation: "horizontal"
 
@@ -167,20 +203,20 @@ Interface:
                             rows: 5
                             cols: 1
                             Label:
-                                id: tensaoentrada_label
-                                text: "Setpoint (cm)"
+                                id: T1_overshoot_label
+                                text: "Overshoot (%): "
                                 text_size: self.size
                                 valign: 'middle'
 					            halign: 'center'
                             Label:
-                                id: offset_label
-                                text: "Offset"
+                                id: T1_tempo_subida_label
+                                text: "Tempo de Subida (s): "
                                 text_size: self.size
                                 valign: 'middle'
 					            halign: 'center'
                             Label:
-                                id: periodo_label
-                                text: "Periodo"
+                                id: T1_tempo_acomodacao_label
+                                text: "Tempo de Acomodação (s): "
                                 text_size: self.size
                                 valign: 'middle'
 					            halign: 'center'
@@ -202,9 +238,13 @@ Interface:
                             cols: 3
 
                             TextInput:
-                                id: T1_tensaoentrada
+                                id: T1_overshoot
                                 multiline: False
-                                text: '0'
+                                disabled: False
+                                readonly: True
+                                #input_filter: 'float'
+                                text_size: self.size
+                                text: '-'
                             Label:
                                 id: kpL
                                 text: "KP"
@@ -214,9 +254,13 @@ Interface:
                                 text: '0'
 
                             TextInput:
-                                id: T1_offset
+                                id: T1_tempo_subida
                                 multiline: False
-                                text: '0'
+                                disabled: False
+                                readonly: True
+                                #input_filter: 'float'
+                                text_size: self.size
+                                text: '-'
                             ToggleButton:
                                 id: T1_ki_label
                                 group: 'T1_integrativo'
@@ -232,10 +276,13 @@ Interface:
                                 text: '0'
 
                             TextInput:
-                                id: T1_periodo
+                                id: T1_tempo_acomodacao
                                 multiline: False
-                                disabled: True
-                                text: '10'
+                                disabled: False
+                                readonly: True
+                                #input_filter: 'float'
+                                text_size: self.size
+                                text: '-'
                             ToggleButton:
                                 id: T1_kd_label
                                 group: 'T1_derivativo'
@@ -347,20 +394,20 @@ Interface:
                             rows: 5
                             cols: 1
                             Label:
-                                id: tensaoentradaL
-                                text: "Setpoint (cm)"
+                                id: T2_overshoot_label
+                                text: "Overshoot (%): "
                                 text_size: self.size
                                 valign: 'middle'
 					            halign: 'center'
                             Label:
-                                id: offsetL
-                                text: "Offset"
+                                id: T2_tempo_subida_label
+                                text: "Tempo de Subida (s): "
                                 text_size: self.size
                                 valign: 'middle'
 					            halign: 'center'
                             Label:
-                                id: periodoL
-                                text: "Periodo"
+                                id: T2_tempo_acomodacao_label
+                                text: "Tempo de Acomodação (s): "
                                 text_size: self.size
                                 valign: 'middle'
 					            halign: 'center'
@@ -382,9 +429,13 @@ Interface:
                             cols: 3
 
                             TextInput:
-                                id: T2_tensaoentrada
+                                id: T2_overshoot
                                 multiline: False
-                                text: '0'
+                                disabled: False
+                                readonly: True
+                                #input_filter: 'float'
+                                text_size: self.size
+                                text: '-'
                             Label:
                                 id: kpL
                                 text: "KP"
@@ -394,9 +445,13 @@ Interface:
                                 text: '0'
 
                             TextInput:
-                                id: T2_offset
+                                id: T2_tempo_subida
                                 multiline: False
-                                text: '0'
+                                disabled: False
+                                readonly: True
+                                #input_filter: 'float'
+                                text_size: self.size
+                                text: '-'
                             ToggleButton:
                                 id: T2_ki_label
                                 group: 'T2_integrativo'
@@ -412,10 +467,13 @@ Interface:
                                 text: '0'
 
                             TextInput:
-                                id: T2_periodo
+                                id: T2_tempo_acomodacao
                                 multiline: False
-                                disabled: True
-                                text: '10'
+                                disabled: False
+                                readonly: True
+                                #input_filter: 'float'
+                                text_size: self.size
+                                text: '-'
                             ToggleButton:
                                 id: T2_kd_label
                                 group: 'T2_derivativo'
