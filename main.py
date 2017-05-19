@@ -17,6 +17,7 @@ from kivy.uix.textinput import TextInput
 
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
+from kivy.uix.tabbedpanel import TabbedPanel
 # from kivy.uix.image import Image
 
 # para o grafico:
@@ -43,7 +44,9 @@ flag_signal = 1
 ## "3 - Onda Quadrada\n"
 ## "4 - Onda tipo dente de serra\n"	
 ## "5 - Sinal Aleatorio\n"
-flag_pid = 0
+flag_pid = 0   ##USADA APENAS PRA NAO DAR ERRO
+T1_flag_pid = 0
+T2_flag_pid = 0
 ##"""
 ##flag_pid=0 -> controle P
 ##flag_pid=1 -> controle PD
@@ -58,16 +61,23 @@ flag_overshoot_subida = True
 flag_mudou_setPoint =  False
 flag_acomodacao = True
 flag_verifica_overshoot = True
+##Para controle simples: tipo_controle = 0
+##Para controle em cascata: tipo_controle = 1
+tipo_controle = 0
 
 valor_entrada = 0
 periodo = 1
 offset = 0
-tensao_max = 4
-tensao_min = -4
+tensao_max = 3
+tensao_min = -3
 
 # Variaveis do controlador PID
 Derivator = 0.0
 Integrator = 0.0
+T1_Derivator = 0.0
+T1_Integrator = 0.0
+T2_Derivator = 0.0
+T2_Integrator = 0.0
 Integrator_max = 100
 Integrator_min = -100
 last_time = 0
@@ -79,6 +89,16 @@ Kd = 0.0
 Kp = 0.0
 Ki = 0.0
 PID = 0.0
+T1_taud = 0.0
+T1_taui = 0.0
+T1_Kd = 0.0
+T1_Kp = 0.0
+T1_Ki = 0.0
+T2_taud = 0.0
+T2_taui = 0.0
+T2_Kd = 0.0
+T2_Kp = 0.0
+T2_Ki = 0.0
 
 ##variaveis de controle da interface/sistema
 Start = False
@@ -100,11 +120,54 @@ tempo_subida = 0.0
 tempo_acomodacao = 0.0
 tempo_acomodacao_inicial = 0.0
 valor_passado = 0.0
+
+##Tanque 1 resposta do Sistema
+T1_overshoot = 0.0
+T1_overshootPercentual = 0.0
+T1_antigo_setPoint = 0.0
+T1_tempo_subida = 0.0
+T1_tempo_acomodacao = 0.0
+T1_tempo_acomodacao_inicial = 0.0
+T1_valor_passado = 0.0
+
+##Tanque 2 resposta do Sistema
+T2_overshoot = 0.0
+T2_overshootPercentual = 0.0
+T2_antigo_setPoint = 0.0
+T2_tempo_subida = 0.0
+T2_tempo_acomodacao = 0.0
+T2_tempo_acomodacao_inicial = 0.0
+T2_valor_passado = 0.0
+
 #Variaveis do tempo de subida
 tempo_final = 0.0
 tempo_inicial = 0.0
 
+##Tanque 1 tempo de subida
+T1_tempo_final = 0.0
+T1_tempo_inicial = 0.0
 
+##Tanque 2 tempo de subida
+T2_tempo_final = 0.0
+T2_tempo_inicial = 0.0
+
+##flags do tanque 1
+T1_flag = True # flag do tempo de subida
+T1_flag_subida = True
+T1_flag_overshoot = True # flag do overshoot
+T1_flag_overshoot_subida = True
+T1_flag_mudou_setPoint =  False
+T1_flag_acomodacao = True
+T1_flag_verifica_overshoot = True
+
+##flags do tanque 2
+T2_flag = True # flag do tempo de subida
+T2_flag_subida = True
+T2_flag_overshoot = True # flag do overshoot
+T2_flag_overshoot_subida = True
+T2_flag_mudou_setPoint =  False
+T2_flag_acomodacao = True
+T2_flag_verifica_overshoot = True
 
 ##-------------------------------------------
 def readSensor(channel):
@@ -214,6 +277,68 @@ def controlePID_K(set_point, current_value, Kp, Kd, Ki):
     # print "PID:" , PID
     return PID
 
+##Calculo controle PID no modelo Cascata:
+##tipo_malha = 0, se trata da malha externa
+##tipo_malha = 1, se trata da malha interna
+def controlePID_K_Cascata(set_point, current_value, Kp, Kd, Ki, tipo_malha):
+    # Declaracoes das variaveis globais
+    global T1_Derivator, T1_Integrator, T2_Derivator, T2_Integrator, Integrator_max, Integrator_min, T1_flag_pid, T2_flag_pid, PID
+
+    h = 0.1
+
+    I_value = 0
+    D_value = 0
+
+    error = set_point - current_value
+    margem = abs((set_point - current_value) / set_point)
+
+    # print "error", error
+
+    P_value = Kp * error
+    ##Controle tanque 2 em cascata
+    if((T2_flag_pid == 0 or T2_flag_pid == 1) and tipo_malha == 0):
+        T2_Integrator = 0
+        I_value = 0
+    if((T2_flag_pid == 0 or T2_flag_pid == 2) and tipo_malha==0):
+        T2_Derivator = 0
+        D_value = 0
+    if((T2_flag_pid == 1 or T2_flag_pid == 3) and tipo_malha==0):
+        D_value = Kd * ((error - T2_Derivator) / h)
+        T2_Derivator = error
+    if(T2_flag_pid == 4 and tipo_malha==0):
+        D_value = Kd * ((current_value - T2_Derivator) / h)
+        T2_Derivator = current_value
+    if((T2_flag_pid == 2 or T2_flag_pid == 3 or T2_flag_pid == 4) and tipo_malha==0):
+        T2_Integrator = T2_Integrator + (Ki * error * h)
+        if T2_Integrator > Integrator_max:
+            T2_Integrator = Integrator_max
+        elif T2_Integrator < Integrator_min:
+            T2_Integrator = Integrator_min
+        I_value = T2_Integrator
+
+    ##Controle tanque 1 em cascata
+    if ((T1_flag_pid == 0 or T1_flag_pid == 1) and tipo_malha == 1):
+        T1_Integrator = 0
+        I_value = 0
+    if ((T1_flag_pid == 0 or T1_flag_pid == 2) and tipo_malha == 1):
+        T1_Derivator = 0
+        D_value = 0
+    if ((T1_flag_pid == 1 or T1_flag_pid == 3) and tipo_malha == 1):
+        D_value = Kd * ((error - T1_Derivator) / h)
+        T1_Derivator = error
+    if (T1_flag_pid == 4 and tipo_malha == 0):
+        D_value = Kd * ((current_value - T1_Derivator) / h)
+        T2_Derivator = current_value
+    if ((T1_flag_pid == 2 or T1_flag_pid == 3 or T1_flag_pid == 4) and tipo_malha == 1):
+        T1_Integrator = T1_Integrator + (Ki * error * h)
+        if T1_Integrator > Integrator_max:
+            T1_Integrator = Integrator_max
+        elif T1_Integrator < Integrator_min:
+            T1_Integrator = Integrator_min
+        I_value = T1_Integrator
+
+    PID = P_value + D_value + I_value
+    return PID
 
 def atualizaListas(tempo, tensao_saida, tensao_sensor, altura, set_point):
     global contador, lista_saida, lista_entrada, lista_altura, lista_setpoint
@@ -255,6 +380,60 @@ def calculaOvershoot(set_point,current_value):
                     overshootPercentual = round(abs(((current_value-set_point)/(set_point))*100), 2)
                     flag_overshoot_subida = False
 
+def calculaOvershoot_Cascata(set_point,current_value,tipo_malha):
+    global T1_overshoot, T1_overshootPercentual, T1_antigo_setPoint, T1_flag_overshoot_subida, T1_flag_overshoot, T1_flag_verifica_overshoot, T1_valor_passado
+    global T2_overshoot, T2_overshootPercentual, T2_antigo_setPoint, T2_flag_overshoot_subida, T2_flag_overshoot, T2_flag_verifica_overshoot, T2_valor_passado
+
+    if (T1_flag_verifica_overshoot and tipo_malha==1):
+        T1_valor_passado = current_value
+        T1_flag_verifica_overshoot = False
+    if ((current_value - T1_valor_passado > 0 and T1_flag_overshoot and not (T1_flag_verifica_overshoot)) and tipo_malha==1):
+        T1_flag_overshoot_subida = True
+        if(current_value > T1_overshoot):
+            T1_overshoot = current_value
+            if (current_value > set_point):
+                if (set_point != T1_antigo_setPoint):
+                    T1_overshootPercentual = round(abs(((current_value - set_point) / (set_point - T1_antigo_setPoint)) * 100), 2)
+                else:
+                    T1_overshootPercentual = round(abs(((current_value - set_point) / (set_point)) * 100), 2)
+                    T1_flag_overshoot_subida = True
+    if ((current_value - T1_valor_passado < 0 and T1_flag_overshoot and not (T1_flag_verifica_overshoot)) and tipo_malha==1):
+        T1_flag_overshoot_subida = False
+        if (current_value < T1_overshoot):
+            T1_overshoot = current_value
+            if (current_value < set_point):
+                if (set_point != T1_antigo_setPoint):
+                    T1_overshootPercentual = round(abs(((current_value - set_point) / (set_point - T1_antigo_setPoint)) * 100), 2)
+                    T1_flag_overshoot_subida = False
+                else:
+                    T1_overshootPercentual = round(abs(((current_value - set_point) / (set_point)) * 100), 2)
+                    T1_flag_overshoot_subida = False
+
+    if(T2_flag_verifica_overshoot and tipo_malha==0):
+        T2_valor_passado = current_value
+        T2_flag_verifica_overshoot = False
+    if((current_value-T2_valor_passado>0 and T2_flag_overshoot and not(T2_flag_verifica_overshoot)) and tipo_malha==0):
+        T2_flag_overshoot_subida = True
+        if(current_value>T2_overshoot):
+            T2_overshoot = current_value
+            if(current_value>set_point):
+                if(set_point!=T2_antigo_setPoint):
+                    T2_overshootPercentual = round(abs(((current_value-set_point)/(set_point - T2_antigo_setPoint))*100), 2)
+                else:
+                    T2_overshootPercentual = round(abs(((current_value-set_point)/(set_point))*100), 2)
+                    T2_flag_overshoot_subida = True
+    if((current_value-T2_valor_passado<0 and T2_flag_overshoot and not(T2_flag_verifica_overshoot)) and tipo_malha==0):
+        T2_flag_overshoot_subida = False
+        if(current_value<T2_overshoot):
+            T2_overshoot = current_value
+            if(current_value<set_point):
+                if(set_point!=T2_antigo_setPoint):
+                    T2_overshootPercentual = round(abs(((current_value-set_point)/(set_point - T2_antigo_setPoint))*100), 2)
+                    T2_flag_overshoot_subida = False
+                else:
+                    T2_overshootPercentual = round(abs(((current_value-set_point)/(set_point))*100), 2)
+                    T2_flag_overshoot_subida = False
+
 def calculaTempoSubida(set_point, current_value, t):
     global flag, tempo_subida, tempo_final, tempo_inicial, flag_subida, flag_overshoot_subida, flag_overshoot
     if(flag_overshoot_subida):
@@ -280,6 +459,56 @@ def calculaTempoSubida(set_point, current_value, t):
             tempo_inicial=t
             flag=False
 
+def calculaTempoSubida_Cascata(set_point, current_value, t, tipo_malha):
+    global T1_flag, T1_tempo_subida, T1_tempo_final, T1_tempo_inicial, T1_flag_subida, T1_flag_overshoot_subida, T1_flag_overshoot
+    global T2_flag, T2_tempo_subida, T2_tempo_final, T2_tempo_inicial, T2_flag_subida, T2_flag_overshoot_subida, T2_flag_overshoot
+
+    if (T1_flag_overshoot_subida and tipo_malha==1):
+        if (current_value < set_point and current_value > (set_point - set_point * 0.05) and T1_flag_subida):
+            T1_tempo_final = t
+            tempo_aux = T1_tempo_final - T1_tempo_inicial
+            if (tempo_aux != 0.0):
+                T1_tempo_subida = tempo_aux
+                T1_flag_subida = False
+                T1_flag_overshoot = True
+        elif (current_value > (set_point * 0.05) and T1_flag):
+            T1_tempo_inicial = t
+            T1_flag = False
+    elif(not (T1_flag_overshoot_subida)):
+        if (current_value > set_point and current_value < (set_point + set_point * 0.05) and T1_flag_subida):
+            T1_tempo_final = t
+            tempo_aux = T1_tempo_final - T1_tempo_inicial
+            if (tempo_aux != 0.0):
+                T1_tempo_subida = tempo_aux
+                T1_flag_subida = False
+                T1_flag_overshoot = True
+        elif (current_value > (set_point * 0.05) and T1_flag):
+            T1_tempo_inicial = t
+            T1_flag = False
+
+    if(T2_flag_overshoot_subida and tipo_malha==0):
+        if(current_value<set_point and current_value>(set_point-set_point*0.05) and T2_flag_subida):
+            T2_tempo_final = t
+            tempo_aux = T2_tempo_final - T2_tempo_inicial
+            if(tempo_aux != 0.0):
+                T2_tempo_subida = tempo_aux
+                T2_flag_subida = False
+                T2_flag_overshoot = True
+        elif(current_value>(set_point*0.05) and T2_flag):
+            T2_tempo_inicial=t
+            T2_flag=False
+    elif(not(T2_flag_overshoot_subida)):
+        if(current_value>set_point and current_value<(set_point+set_point*0.05) and T2_flag_subida):
+            T2_tempo_final = t
+            tempo_aux = T2_tempo_final - T2_tempo_inicial
+            if(tempo_aux != 0.0):
+                T2_tempo_subida = tempo_aux
+                T2_flag_subida = False
+                T2_flag_overshoot = True
+        elif(current_value>(set_point*0.05) and T2_flag):
+            T2_tempo_inicial=t
+            T2_flag=False
+
 def calculaTempoAcomodacao(set_point, current_value, t):
     global flag_subida, tempo_acomodacao, tempo_inicial, tempo_final, flag_overshoot, flag_acomodacao, tempo_acomodacao_inicial
     if((current_value>(set_point-set_point*0.05) and current_value<(set_point+set_point*0.05)) and flag_acomodacao):
@@ -293,6 +522,32 @@ def calculaTempoAcomodacao(set_point, current_value, t):
         flag_overshoot = False
         flag_acomodacao = False
 
+def calculaTempoAcomodacao_Cascata(set_point, current_value, t, tipo_malha):
+    global T1_flag_subida, T1_tempo_acomodacao, T1_tempo_inicial, T1_tempo_final, T1_flag_overshoot, T1_flag_acomodacao, T1_tempo_acomodacao_inicial
+    global T2_flag_subida, T2_tempo_acomodacao, T2_tempo_inicial, T2_tempo_final, T2_flag_overshoot, T2_flag_acomodacao, T2_tempo_acomodacao_inicial
+
+    if((current_value>(set_point-set_point*0.05) and current_value<(set_point+set_point*0.05)) and T1_flag_acomodacao and tipo_malha==1):
+        T1_flag_acomodacao = False
+        T1_tempo_acomodacao_inicial = t - T1_tempo_inicial
+    if((current_value<(set_point-set_point*0.05) or current_value>(set_point+set_point*0.05)) and not(T1_flag_acomodacao) and tipo_malha==1):
+        T1_flag_acomodacao = True
+        T1_tempo_acomodacao_inicial = 0.0
+    if((current_value>(set_point-set_point*0.05) and current_value<(set_point+set_point*0.05)) and abs((t-T1_tempo_inicial) - T1_tempo_acomodacao_inicial)>2.0 and tipo_malha==1):
+        T1_tempo_acomodacao =  T1_tempo_acomodacao_inicial
+        T1_flag_overshoot = False
+        T1_flag_acomodacao = False
+
+    if ((current_value > (set_point - set_point * 0.05) and current_value < (set_point + set_point * 0.05)) and T2_flag_acomodacao and tipo_malha == 1):
+        T2_flag_acomodacao = False
+        T2_tempo_acomodacao_inicial = t - T2_tempo_inicial
+    if ((current_value < (set_point - set_point * 0.05) or current_value > (set_point + set_point * 0.05)) and not (T2_flag_acomodacao) and tipo_malha == 1):
+        T2_flag_acomodacao = True
+        T2_tempo_acomodacao_inicial = 0.0
+    if ((current_value > (set_point - set_point * 0.05) and current_value < (set_point + set_point * 0.05)) and abs((t - T2_tempo_inicial) - T2_tempo_acomodacao_inicial) > 2.0 and tipo_malha == 1):
+        T2_tempo_acomodacao = T2_tempo_acomodacao_inicial
+        T2_flag_overshoot = False
+        T2_flag_acomodacao = False
+
 def atualizaTempos(t):
     global flag_mudou_setPoint, flag, tempo_inicial
     if(flag_mudou_setPoint):
@@ -300,6 +555,10 @@ def atualizaTempos(t):
         flag_mudou_setPoint = False
         flag = False
 
+def setTipoControle(tipo):
+	global tipo_controle
+	if(tipo==0 or tipo==1):
+		tipo_controle = tipo
 
 ##CONTROLE:
 
@@ -352,18 +611,34 @@ class Controle(threading.Thread):
                     set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
                 elif (flag_signal == 5):
                     set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
-                altura = float(getAltura(channel))
-                saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
+                if(tipo_controle==0):
+                    altura = float(getAltura(channel))
+                    saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
+                    calculaOvershoot(set_point, altura)
+                    calculaTempoSubida(set_point, altura, t)
+                    calculaTempoAcomodacao(set_point, altura, t)
+                elif(tipo_controle==1):
+                    altura_tanque1 = float(getAltura(0))
+                    altura_tanque2 = float(getAltura(1))
+                    ##plotar: set_point e setpoint_ME
+                    ##plotar: altura_tanque1 e altura_tanque2
+                    setpoint_ME = controlePID_K_Cascata(set_point, altura_tanque2, T2_Kp, T2_Kd, T2_Ki, 0)
+                    saida = controlePID_K_Cascata(setpoint_ME, altura_tanque1, T1_Kp, T1_Kd, T1_Ki, 1)
+                    calculaOvershoot(set_point, altura_tanque2, 0)
+                    calculaTempoSubida(set_point, altura_tanque2, t, 0)
+                    calculaTempoAcomodacao(set_point, altura_tanque2, t, 0)
+                    calculaOvershoot(setpoint_ME, altura_tanque1, 1)
+                    calculaTempoSubida(setpoint_ME, altura_tanque1, t, 1)
+                    calculaTempoAcomodacao(setpoint_ME, altura_tanque1, t, 1)
+                ##plotar: saida -sem travas
+                ##plotar: tensao -com travas
                 tensao = writeTensao(0, saida)
                 v = float(quanser.getTension())
                 read = float(readSensor(channel))
                 nivel_tanque = altura  # atualiza o nivel do tanque
                 x_axis_range = float(t)  # atualiza o range do grafico
                 atualizaListas(t, v, read, altura, set_point) #atualiza os valores plotados
-                calculaOvershoot(set_point, altura)
                 atualizaTempos(t)
-                calculaTempoSubida(set_point, altura, t)
-                calculaTempoAcomodacao(set_point, altura, t)
 
         endConnection(channel)
         sys.exit()
@@ -397,17 +672,6 @@ class Interface(BoxLayout):
     ##SUGESTOES:
     ## 1) Retirar as funoces de malha e substituir pelas funcoes de controle abaixo.
 
-##A FUNCAO ABAIXO SE TORNOU OBSOLETA (malha):
-    ##MALHA
-    def MA(self):
-        global flag_malha
-        flag_malha = 0
-        self.ids.malha.text = "Malha Aberta"
-    def MF(self):
-        global flag_malha
-        flag_malha = 1
-        self.ids.malha.text = "Malha Fechada"
-
     ##CONTROLE
     def CD(self):
         global flag_controle
@@ -415,15 +679,6 @@ class Interface(BoxLayout):
     def CC(self):
         global flag_controle
         flag_controle = 1
-
-##ESTA FUNCAO TAMBEM TORNOU-SE OBSOLETA (tanques):
-    ##TANQUES
-    def tanque1(self):
-        global channel
-        channel = 0
-    def tanque2(self):
-        global channel
-        channel = 1
 
     ##ONDAS
     def degrau(self):
@@ -448,49 +703,138 @@ class Interface(BoxLayout):
         self.ids.periodo.disabled = False
 
     ##CONTROLE
-    def do_p(self):
-        global flag_pid
-        self.ids.ki.disabled = True
-        self.ids.kd.disabled = True
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 0
-    def do_pd(self):
-        global flag_pid
-        self.ids.ki.disabled = True
-        self.ids.kd.disabled = False
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 1
-    def do_pi(self):
-        global flag_pid
-        self.ids.ki.disabled = False
-        self.ids.kd.disabled = True
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 2
-    def do_pid(self):
-        global flag_pid
-        self.ids.ki.disabled = False
-        self.ids.kd.disabled = False
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 3
-    def do_pi_d(self):
-        global flag_pid
-        self.ids.ki.disabled = False
-        self.ids.kd.disabled = False
-        self.ids.taui.disabled = True
-        self.ids.taud.disabled = True
-        flag_pid = 4
+        ##CONTROLE CASCATA
+        def do_p(self):
+            global flag_pid
+            self.ids.ki.disabled = True
+            self.ids.kd.disabled = True
+            self.ids.taui.disabled = True
+            self.ids.taud.disabled = True
+            flag_pid = 0
+
+        def do_pd(self):
+            global flag_pid
+            self.ids.ki.disabled = True
+            self.ids.kd.disabled = False
+            self.ids.taui.disabled = True
+            self.ids.taud.disabled = True
+            flag_pid = 1
+
+        def do_pi(self):
+            global flag_pid
+            self.ids.ki.disabled = False
+            self.ids.kd.disabled = True
+            self.ids.taui.disabled = True
+            self.ids.taud.disabled = True
+            flag_pid = 2
+
+        def do_pid(self):
+            global flag_pid
+            self.ids.ki.disabled = False
+            self.ids.kd.disabled = False
+            self.ids.taui.disabled = True
+            self.ids.taud.disabled = True
+            flag_pid = 3
+
+        def do_pi_d(self):
+            global flag_pid
+            self.ids.ki.disabled = False
+            self.ids.kd.disabled = False
+            self.ids.taui.disabled = True
+            self.ids.taud.disabled = True
+            flag_pid = 4
+    ##TANQUE 1
+    def T1_do_p(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = True
+        self.ids.T1_kd.disabled = True
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 0
+    def T1_do_pd(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = True
+        self.ids.T1_kd.disabled = False
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 1
+    def T1_do_pi(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = False
+        self.ids.T1_kd.disabled = True
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 2
+    def T1_do_pid(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = False
+        self.ids.T1_kd.disabled = False
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 3
+    def T1_do_pi_d(self):
+        global T1_flag_pid
+        self.ids.T1_ki.disabled = False
+        self.ids.T1_kd.disabled = False
+        self.ids.T1_taui.disabled = True
+        self.ids.T1_taud.disabled = True
+        T1_flag_pid = 4
+    ##TANQUE 2
+    def T2_do_p(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = True
+        self.ids.T2_kd.disabled = True
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 0
+
+    def T2_do_pd(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = True
+        self.ids.T2_kd.disabled = False
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 1
+
+    def T2_do_pi(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = False
+        self.ids.T2_kd.disabled = True
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 2
+
+    def T2_do_pid(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = False
+        self.ids.T2_kd.disabled = False
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 3
+
+    def T2_do_pi_d(self):
+        global T2_flag_pid
+        self.ids.T2_ki.disabled = False
+        self.ids.T2_kd.disabled = False
+        self.ids.T2_taui.disabled = True
+        self.ids.T2_taud.disabled = True
+        T2_flag_pid = 4
+
+
 
     ##ATUALIZAR VALORES
     def atualiza(self):
         global tensao_min, tensao_max, offset, valor_entrada, periodo
         global Kp, Ki, Kd, taui, taud
+        global T1_Kp, T1_Ki, T1_Kd, T1_taui, T1_taud, T2_Kp, T2_Ki, T2_Kd, T2_taui, T2_taud
         global flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint, antigo_setPoint, flag_verifica_overshoot
         global tempo_subida, tempo_acomodacao, overshootPercentual
+        global T1_flag, T1_flag_subida, T1_flag_acomodacao, T1_flag_overshoot, T1_flag_mudou_setPoint, T1_antigo_setPoint, T1_flag_verifica_overshoot
+        global T1_tempo_subida, T1_tempo_acomodacao, T1_overshootPercentual
+        global T2_flag, T2_flag_subida, T2_flag_acomodacao, T2_flag_overshoot, T2_flag_mudou_setPoint, T2_antigo_setPoint, T2_flag_verifica_overshoot
+        global T2_tempo_subida, T2_tempo_acomodacao, T2_overshootPercentual
         if((valor_entrada!=float(self.ids.tensaoentrada.text)) or (offset!=float(self.ids.offset.text))):
+            ##Controle direto
             flag = True
             flag_subida = True
             flag_acomodacao = True
@@ -501,6 +845,28 @@ class Interface(BoxLayout):
             tempo_subida = 0.0
             tempo_acomodacao = 0.0
             overshootPercentual = 0.0
+            ##Controle cascata tanque 1
+            T1_flag = True
+            T1_flag_subida = True
+            T1_flag_acomodacao = True
+            T1_flag_overshoot = True
+            T1_flag_mudou_setPoint = True
+            T1_flag_verifica_overshoot = True
+            T1_antigo_setPoint = valor_entrada + offset
+            T1_tempo_subida = 0.0
+            T1_tempo_acomodacao = 0.0
+            T1_overshootPercentual = 0.0
+            ##Controle cascata tanque 2
+            T2_flag = True
+            T2_flag_subida = True
+            T2_flag_acomodacao = True
+            T2_flag_overshoot = True
+            T2_flag_mudou_setPoint = True
+            T2_flag_verifica_overshoot = True
+            T2_antigo_setPoint = valor_entrada + offset
+            T2_tempo_subida = 0.0
+            T2_tempo_acomodacao = 0.0
+            T2_overshootPercentual = 0.0
         tensao_min = float(self.ids.tensaomin.text)
         tensao_max = float(self.ids.tensaomax.text)
         offset = float(self.ids.offset.text)
@@ -517,9 +883,20 @@ class Interface(BoxLayout):
         Ki = float(self.ids.ki.text)
         taui = float(self.ids.taui.text)
         taud = float(self.ids.taud.text)
+        T1_Kp = float(self.ids.T1_kp.text)
+        T1_Kd = float(self.ids.T1_kd.text)
+        T1_Ki = float(self.ids.T1_ki.text)
+        T1_taui = float(self.ids.T1_taui.text)
+        T1_taud = float(self.ids.T1_taud.text)
+        T2_Kp = float(self.ids.T2_kp.text)
+        T2_Kd = float(self.ids.T2_kd.text)
+        T2_Ki = float(self.ids.T2_ki.text)
+        T2_taui = float(self.ids.T2_taui.text)
+        T2_taud = float(self.ids.T2_taud.text)
         self.ids.overshoot.text = "-"
         self.ids.tempo_subida.text = "-"
         self.ids.tempo_acomodacao.text = "-"
+
         if (self.ids.kd_label.state == 'down'):
             self.kd_in()
         if (self.ids.ki_label.state == 'down'):
@@ -528,6 +905,22 @@ class Interface(BoxLayout):
             self.taud_in()
         if (self.ids.taui_label.state == 'down'):
             self.taui_in()
+        if (self.ids.T1_kd_label.state == 'down'):
+            self.T1_kd_in()
+        if (self.ids.T1_ki_label.state == 'down'):
+            self.T1_ki_in()
+        if (self.ids.T1_taud_label.state == 'down'):
+            self.T1_taud_in()
+        if (self.ids.T1_taui_label.state == 'down'):
+            self.T1_taui_in()
+        if (self.ids.T2_kd_label.state == 'down'):
+            self.T2_kd_in()
+        if (self.ids.T2_ki_label.state == 'down'):
+            self.T2_ki_in()
+        if (self.ids.T2_taud_label.state == 'down'):
+            self.T2_taud_in()
+        if (self.ids.T2_taui_label.state == 'down'):
+            self.T2_taui_in()
         ##        print "kp: ", Kp
         ##        print "kd: ", Ki
         ##        print "ki: ", Kd
@@ -538,6 +931,8 @@ class Interface(BoxLayout):
     ##RETIREI A FUNCAO KP_IN POIS ELA TORNOU-SE OBSOLETA (E ESTA BUGANDO OS VALORES DOS TAUS)
 
     ##FUNCOES QUE ATUALIZA K'S E TAUS
+
+    ##CASCATA
     def kd_in(self):
         global Kp, Kd, taud
         try:
@@ -586,29 +981,174 @@ class Interface(BoxLayout):
         except:
             self.ids.ki.text = "0.0"
 
+    ##TANQUE 1
+    def T1_kd_in(self):
+        global T1_Kp, T1_Kd, T1_taud
+        try:
+            T1_Kd = float(self.ids.T1_kd.text)
+        except:
+            T1_Kd = 0.0
+        try:
+            T1_taud = calculaTauD(T1_Kp, T1_Kd)
+            self.ids.T1_taud.text = str(T1_taud)
+        except:
+            self.ids.T1_taud.text = "0.0"
+
+    def T1_ki_in(self):
+        global T1_Kp, T1_taui, T1_Ki
+        try:
+            T1_Ki = float(self.ids.T1_ki.text)
+        except:
+            T1_Ki = 0.0
+        try:
+            T1_taui = calculaTauI(T1_Kp, T1_Ki)
+            self.ids.T1_taui.text = str(T1_taui)
+        except:
+            self.ids.T1_taui.text = "0.0"
+
+    def T1_taud_in(self):
+        global T1_Kp, T1_Kd, T1_taud
+        try:
+            T1_taud = float(self.ids.T1_taud.text)
+        except:
+            T1_taud = 0.0
+        try:
+            T1_Kd = calculaKD(T1_taud, T1_Kp)
+            self.ids.T1_kd.text = str(T1_Kd)
+        except:
+            self.ids.T1_kd.text = "0.0"
+
+    def T1_taui_in(self):
+        global T1_Kp, T1_Ki, T1_taui
+        try:
+            T1_taui = float(self.ids.T1_taui.text)
+        except:
+            T1_taui = 0.0
+        try:
+            T1_Ki = calculaKI(T1_taui, T1_Kp)
+            self.ids.T1_ki.text = str(T1_Ki)
+        except:
+            self.ids.T1_ki.text = "0.0"
+
+    ##TANQUE 2
+    def T2_kd_in(self):
+        global T2_Kp, T2_Kd, T2_taud
+        try:
+            T2_Kd = float(self.ids.T2_kd.text)
+        except:
+            T2_Kd = 0.0
+        try:
+            T2_taud = calculaTauD(T2_Kp, T2_Kd)
+            self.ids.T2_taud.text = str(T2_taud)
+        except:
+            self.ids.T2_taud.text = "0.0"
+
+    def T2_ki_in(self):
+        global T2_Kp, T2_taui, T2_Ki
+        try:
+            T2_Ki = float(self.ids.T2_ki.text)
+        except:
+            T2_Ki = 0.0
+        try:
+            T2_taui = calculaTauI(T2_Kp, T2_Ki)
+            self.ids.T2_taui.text = str(T2_taui)
+        except:
+            self.ids.T2_taui.text = "0.0"
+
+    def T2_taud_in(self):
+        global T2_Kp, T2_Kd, T2_taud
+        try:
+            T2_taud = float(self.ids.T2_taud.text)
+        except:
+            T2_taud = 0.0
+        try:
+            T2_Kd = calculaKD(T2_taud, T2_Kp)
+            self.ids.T2_kd.text = str(T2_Kd)
+        except:
+            self.ids.T2_kd.text = "0.0"
+
+    def T2_taui_in(self):
+        global T2_Kp, T2_Ki, T2_taui
+        try:
+            T2_taui = float(self.ids.T2_taui.text)
+        except:
+            T2_taui = 0.0
+        try:
+            T2_Ki = calculaKI(T2_taui, T2_Kp)
+            self.ids.T2_ki.text = str(T2_Ki)
+        except:
+            self.ids.T2_ki.text = "0.0"
+
+
     ##BOTOES QUE SELECIONAM K'S OU TAUS
-    def pressKD(self):
-        global flag_pid
-        if (flag_pid == 1 or flag_pid == 3 or flag_pid == 4):
-            self.ids.kd.disabled = False
-            self.ids.taud.disabled = True
-    def pressKI(self):
-        global flag_pid
-        if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
-            self.ids.ki.disabled = False
-            self.ids.taui.disabled = True
-    def pressTD(self):
-        global flag_pid
-        if (flag_pid == 1 or flag_pid == 3 or flag_pid == 4):
-            self.ids.kd.disabled = True
-            self.ids.taud.disabled = False
-    def pressTI(self):
-        global flag_pid
-        if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
-            self.ids.ki.disabled = True
-            self.ids.taui.disabled = False
+        ##CASCATA
+        def pressKD(self):
+            global flag_pid
+            if (flag_pid == 1 or flag_pid == 3 or flag_pid == 4):
+                self.ids.kd.disabled = False
+                self.ids.taud.disabled = True
 
+        def pressKI(self):
+            global flag_pid
+            if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
+                self.ids.ki.disabled = False
+                self.ids.taui.disabled = True
 
+        def pressTD(self):
+            global flag_pid
+            if (flag_pid == 1 or flag_pid == 3 or flag_pid == 4):
+                self.ids.kd.disabled = True
+                self.ids.taud.disabled = False
+
+        def pressTI(self):
+            global flag_pid
+            if (flag_pid == 2 or flag_pid == 3 or flag_pid == 4):
+                self.ids.ki.disabled = True
+                self.ids.taui.disabled = False
+
+    ##TANQUE 1
+    def T1_pressKD(self):
+        global T1_flag_pid
+        if (T1_flag_pid == 1 or T1_flag_pid == 3 or T1_flag_pid == 4):
+            self.ids.T1_kd.disabled = False
+            self.ids.T1_taud.disabled = True
+    def T1_pressKI(self):
+        global T1_flag_pid
+        if (T1_flag_pid == 2 or T1_flag_pid == 3 or T1_flag_pid == 4):
+            self.ids.T1_ki.disabled = False
+            self.ids.T1_taui.disabled = True
+    def T1_pressTD(self):
+        global T1_flag_pid
+        if (T1_flag_pid == 1 or T1_flag_pid == 3 or T1_flag_pid == 4):
+            self.ids.T1_kd.disabled = True
+            self.ids.T1_taud.disabled = False
+    def T1_pressTI(self):
+        global T1_flag_pid
+        if (T1_flag_pid == 2 or T1_flag_pid == 3 or T1_flag_pid == 4):
+            self.ids.T1_ki.disabled = True
+            self.ids.T1_taui.disabled = False
+    ##TANQUE 2
+    def T2_pressKD(self):
+        global T2_flag_pid
+        if (T2_flag_pid == 1 or T2_flag_pid == 3 or T2_flag_pid == 4):
+            self.ids.T2_kd.disabled = False
+            self.ids.T2_taud.disabled = True
+    def T2_pressKI(self):
+        global T2_flag_pid
+        if (T2_flag_pid == 2 or T2_flag_pid == 3 or T2_flag_pid == 4):
+            self.ids.T2_ki.disabled = False
+            self.ids.T2_taui.disabled = True
+    def T2_pressTD(self):
+        global T2_flag_pid
+        if (T2_flag_pid == 1 or T2_flag_pid == 3 or T2_flag_pid == 4):
+            self.ids.T2_kd.disabled = True
+            self.ids.T2_taud.disabled = False
+
+    def T2_pressTI(self):
+        global T2_flag_pid
+        if (T2_flag_pid == 2 or T2_flag_pid == 3 or T2_flag_pid == 4):
+            self.ids.T2_ki.disabled = True
+            self.ids.T2_taui.disabled = False
 
     ##FUNCOES PARA CONTROLE DA INTERFACE E CHAMADA DO PROGRAMA DE CONTROLE:
 
@@ -675,6 +1215,10 @@ class Interface(BoxLayout):
         global Start, lista_entrada, lista_saida, lista_setpoint, lista_altura
         global overshoot, overshootPercentual, antigo_setPoint
         global tempo_subida, tempo_acomodacao, tempo_acomodacao_inicial, tempo_final, tempo_inicial
+        global T1_overshoot, T1_overshootPercentual, T1_antigo_setPoint
+        global T1_tempo_subida, T1_tempo_acomodacao, T1_tempo_acomodacao_inicial, T1_tempo_final, T1_tempo_inicial
+        global T2_overshoot, T2_overshootPercentual, T2_antigo_setPoint
+        global T2_tempo_subida, T2_tempo_acomodacao, T2_tempo_acomodacao_inicial, T2_tempo_final, T2_tempo_inicial
         self.clockSaida.cancel()
         self.clockEntrada.cancel()
         self.clockUpdateX.cancel()
@@ -698,6 +1242,7 @@ class Interface(BoxLayout):
         overshootPercentual = 0.0
         overshoot = 0.0
         antigo_setPoint = 0.0
+        ##Verificar os campos para T1 e T2 em cascata e colocar a mesma alteracao
         self.ids.overshoot.text = "-"
         self.ids.nivel_tanque1.value = 0.0
         self.ids.tempo_subida.text = "-"
@@ -707,6 +1252,24 @@ class Interface(BoxLayout):
         tempo_acomodacao_inicial = 0.0
         tempo_final = 0.0
         tempo_inicial = 0.0
+        ##Cascata tanque 1
+        T1_overshootPercentual = 0.0
+        T1_overshoot = 0.0
+        T1_antigo_setPoint = 0.0
+        T1_tempo_subida = 0.0
+        T1_tempo_acomodacao = 0.0
+        T1_tempo_acomodacao_inicial = 0.0
+        T1_tempo_final = 0.0
+        T1_tempo_inicial = 0.0
+        ##Cascata tanque 2
+        T2_overshootPercentual = 0.0
+        T2_overshoot = 0.0
+        T2_antigo_setPoint = 0.0
+        T2_tempo_subida = 0.0
+        T2_tempo_acomodacao = 0.0
+        T2_tempo_acomodacao_inicial = 0.0
+        T2_tempo_final = 0.0
+        T2_tempo_inicial = 0.0
 
 
     ##-----------------------------------------------------------------------------
