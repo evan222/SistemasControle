@@ -103,9 +103,11 @@ T2_Ki = 0.0
 ##variaveis de controle da interface/sistema
 Start = False
 lista_saida = [(0, 0)]
-lista_entrada = [(0, 0)]
+lista_tensao = [(0, 0)]
 lista_setpoint = [(0, 0)]
-lista_altura = [(0, 0)]
+lista_setpoint_ME = [(0, 0)]
+lista_altura_tanque1 = [(0, 0)]
+lista_altura_tanque2 = [(0, 0)]
 contador = 0
 
 x_axis_range = 0.0
@@ -340,17 +342,6 @@ def controlePID_K_Cascata(set_point, current_value, Kp, Kd, Ki, tipo_malha):
     PID = P_value + D_value + I_value
     return PID
 
-def atualizaListas(tempo, tensao_saida, tensao_sensor, altura, set_point):
-    global contador, lista_saida, lista_entrada, lista_altura, lista_setpoint
-    if ( contador >=10):
-        lista_saida.append((tempo, tensao_saida))
-        lista_entrada.append((tempo, tensao_sensor))
-        lista_altura.append((tempo, altura))
-        lista_setpoint.append((tempo, set_point))
-        contador = 0
-    else:
-        contador = contador + 1
-
 
 def calculaOvershoot(set_point,current_value):
     global overshoot, overshootPercentual, antigo_setPoint, flag_overshoot_subida, flag_overshoot, flag_verifica_overshoot, valor_passado
@@ -560,6 +551,21 @@ def setTipoControle(tipo):
 	if(tipo==0 or tipo==1):
 		tipo_controle = tipo
 
+
+def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_tanque2, set_point, set_point_ME):
+    global contador, lista_saida, tensao, lista_altura_tanque1, lista_altura_tanque2, lista_setpoint, lista_setpoint_ME
+    if (contador >= 10):
+        lista_saida.append((tempo, tensao_saida))
+        lista_tensao.append((tempo, tensao_sensor))
+        lista_altura_tanque1.append((tempo, altura_tanque1))
+        lista_altura_tanque2.append((tempo, altura_tanque2))
+        lista_setpoint.append((tempo, set_point))
+        lista_setpoint_ME.append((tempo, set_point_ME))
+        contador = 0
+    else:
+        contador = contador + 1
+
+
 ##CONTROLE:
 
 class Controle(threading.Thread):
@@ -579,28 +585,28 @@ class Controle(threading.Thread):
         ##planta:
         ##startConnection('10.13.99.69',20081)
         ##servidor:
-        startConnection('localhost', 20074)
+        startConnection('localhost', 20081)
         while (Start):
             t = float(time.time() - t_init)
-            if (flag_malha == 0):
-                if (flag_signal == 1):
-                    set_point = Signal.waveStep(valor_entrada, offset)
-                elif (flag_signal == 2):
-                    set_point = Signal.waveSine(valor_entrada, periodo, offset, t)
-                elif (flag_signal == 3):
-                    set_point = Signal.waveSquare(valor_entrada, periodo, offset, t)
-                elif (flag_signal == 4):
-                    set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
-                elif (flag_signal == 5):
-                    set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
-                altura = float(getAltura(channel))
-                tensao = writeTensao(0, set_point)
-                v = float(quanser.getTension())
-                read = float(readSensor(channel))
-                nivel_tanque = altura  # atualiza o nivel do tanque
-                x_axis_range = float(t)  # atualiza o range do grafico
-                atualizaListas(t, v, read, altura, set_point) #atualiza os valores plotados
-            elif (flag_malha == 1):
+            # if (flag_malha == 0):
+            #     if (flag_signal == 1):
+            #         set_point = Signal.waveStep(valor_entrada, offset)
+            #     elif (flag_signal == 2):
+            #         set_point = Signal.waveSine(valor_entrada, periodo, offset, t)
+            #     elif (flag_signal == 3):
+            #         set_point = Signal.waveSquare(valor_entrada, periodo, offset, t)
+            #     elif (flag_signal == 4):
+            #         set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
+            #     elif (flag_signal == 5):
+            #         set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
+            #     altura = float(getAltura(channel))
+            #     tensao = writeTensao(0, set_point)
+            #     v = float(quanser.getTension())
+            #     read = float(readSensor(channel))
+            #     nivel_tanque = altura  # atualiza o nivel do tanque
+            #     x_axis_range = float(t)  # atualiza o range do grafico
+            #     atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
+            if (flag_malha == 1):
                 if (flag_signal == 1):
                     set_point = Signal.waveStep(valor_entrada, offset)
                 elif (flag_signal == 2):
@@ -624,12 +630,12 @@ class Controle(threading.Thread):
                     ##plotar: altura_tanque1 e altura_tanque2
                     setpoint_ME = controlePID_K_Cascata(set_point, altura_tanque2, T2_Kp, T2_Kd, T2_Ki, 0)
                     saida = controlePID_K_Cascata(setpoint_ME, altura_tanque1, T1_Kp, T1_Kd, T1_Ki, 1)
-                    calculaOvershoot(set_point, altura_tanque2, 0)
-                    calculaTempoSubida(set_point, altura_tanque2, t, 0)
-                    calculaTempoAcomodacao(set_point, altura_tanque2, t, 0)
-                    calculaOvershoot(setpoint_ME, altura_tanque1, 1)
-                    calculaTempoSubida(setpoint_ME, altura_tanque1, t, 1)
-                    calculaTempoAcomodacao(setpoint_ME, altura_tanque1, t, 1)
+                    calculaOvershoot_Cascata(set_point, altura_tanque2, 0)
+                    calculaTempoSubida_Cascata(set_point, altura_tanque2, t, 0)
+                    calculaTempoAcomodacao_Cascata(set_point, altura_tanque2, t, 0)
+                    calculaOvershoot_Cascata(setpoint_ME, altura_tanque1, 1)
+                    calculaTempoSubida_Cascata(setpoint_ME, altura_tanque1, t, 1)
+                    calculaTempoAcomodacao_Cascata(setpoint_ME, altura_tanque1, t, 1)
                 ##plotar: saida -sem travas
                 ##plotar: tensao -com travas
                 tensao = writeTensao(0, saida)
@@ -637,7 +643,7 @@ class Controle(threading.Thread):
                 read = float(readSensor(channel))
                 nivel_tanque = altura  # atualiza o nivel do tanque
                 x_axis_range = float(t)  # atualiza o range do grafico
-                atualizaListas(t, v, read, altura, set_point) #atualiza os valores plotados
+                atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
                 atualizaTempos(t)
 
         endConnection(channel)
@@ -661,8 +667,9 @@ class Interface(BoxLayout):
         self.plotsaida = MeshLinePlot(color=[1, 0, 0, 1])
         self.plotentrada = MeshLinePlot(color=[1, 0, 0, 1])
         self.plotsetpoint = MeshLinePlot(color=[0, 0, 1, 1])
-        self.plotsetpoint2 = MeshLinePlot(color=[0, 0, 1, 1])
-        self.plotaltura = MeshLinePlot(color=[0, 128, 0, 1])
+        self.plotsetpointME = MeshLinePlot(color=[0, 0, 1, 1])
+        self.plotaltura1 = MeshLinePlot(color=[0, 128, 0, 1])
+        self.plotaltura2 = MeshLinePlot(color=[0, 128, 0, 1])
 
     # graph = Graph(xlabel='X', ylabel='Y', x_ticks_minor=5,x_ticks_major=25, y_ticks_major=1, y_grid_label=True, x_grid_label=True, 		#padding=5, x_grid=True, y_grid=True, xmin=-0, xmax=100, ymin=-1, ymax=1)
 
@@ -1164,10 +1171,12 @@ class Interface(BoxLayout):
         control = Controle()
         control.start()
         self.ids.graphsaida.add_plot(self.plotsaida)
-        self.ids.graphsaida.add_plot(self.plotsetpoint)
-        self.ids.graphentrada.add_plot(self.plotentrada)
-        self.ids.graphentrada.add_plot(self.plotsetpoint2)
-        self.ids.graphentrada.add_plot(self.plotaltura)
+        self.ids.graphsaida.add_plot(self.plotentrada)
+        self.ids.graphsaida.add_plot(self.plotsetpointME)
+        self.ids.graphentrada.add_plot(self.plotsetpointME)
+        self.ids.graphentrada.add_plot(self.plotsetpoint)
+        self.ids.graphentrada.add_plot(self.plotaltura1)
+        self.ids.graphentrada.add_plot(self.plotaltura2)
         self.clockSaida = Clock.schedule_interval(self.get_valuesaida, 0.001)
         self.clockEntrada = Clock.schedule_interval(self.get_valueentrada, 0.001)
         self.clockUpdateX = Clock.schedule_interval(self.update_xaxis, 0.001)
@@ -1202,17 +1211,19 @@ class Interface(BoxLayout):
 
     def get_valuesaida(self, dt):
         self.plotsaida.points = [i for i in lista_saida]
-        self.plotsetpoint.points = [i for i in lista_setpoint]
+        self.plotentrada.points = [i for i in lista_tensao]
+        self.plotsetpointME.points = [i for i in lista_setpoint_ME]
 
     def get_valueentrada(self, dt):
-        self.plotentrada.points = [i for i in lista_entrada]
-        self.plotsetpoint2.points = [i for i in lista_setpoint]
-        self.plotaltura.points = [i for i in lista_altura]
+        self.plotsetpoint.points = [i for i in lista_setpoint]
+        self.plotsetpointME.points = [i for i in lista_setpoint_ME]
+        self.plotaltura1.points = [i for i in lista_altura_tanque1]
+        self.plotaltura2.points = [i for i in lista_altura_tanque2]
 
 
 
     def stop(self):
-        global Start, lista_entrada, lista_saida, lista_setpoint, lista_altura
+        global Start, tensao, lista_saida, lista_setpoint, lista_altura_tanque1
         global overshoot, overshootPercentual, antigo_setPoint
         global tempo_subida, tempo_acomodacao, tempo_acomodacao_inicial, tempo_final, tempo_inicial
         global T1_overshoot, T1_overshootPercentual, T1_antigo_setPoint
@@ -1227,18 +1238,18 @@ class Interface(BoxLayout):
         self.ids.graphsaida.remove_plot(self.plotsaida)
         self.ids.graphentrada.remove_plot(self.plotentrada)
         self.ids.graphsaida.remove_plot(self.plotsetpoint)
-        self.ids.graphentrada.remove_plot(self.plotsetpoint2)
+        self.ids.graphentrada.remove_plot(self.plotsetpointME)
         self.ids.graphentrada.remove_plot(self.plotaltura)
         self.ids.graphsaida._clear_buffer()
         self.ids.graphentrada._clear_buffer()
-        while len(lista_entrada) > 0: lista_entrada.pop()
+        while len(tensao) > 0: tensao.pop()
         while len(lista_saida) > 0: lista_saida.pop()
         while len(lista_setpoint) > 0: lista_setpoint.pop()
-        while len(lista_altura) > 0: lista_altura.pop()
-        lista_entrada = [(0, 0)]
+        while len(lista_altura_tanque1) > 0: lista_altura_tanque1.pop()
+        tensao = [(0, 0)]
         lista_saida = [(0, 0)]
         lista_setpoint = [(0, 0)]
-        lista_altura = [(0, 0)]
+        lista_altura_tanque1 = [(0, 0)]
         overshootPercentual = 0.0
         overshoot = 0.0
         antigo_setPoint = 0.0
