@@ -35,9 +35,9 @@ import time
 
 ##VARIAVEIS GLOBAIS:
 
-flag_controle = 0 #comeca com controle direto
+flag_controle = 1 #comeca com controle direto
 
-flag_malha = 0  # 0 = malha aberta / 1  = malha fechada
+flag_malha = 1  # 0 = malha aberta / 1  = malha fechada
 flag_signal = 1
 ## "1 - Degrau\n"
 ## "2 - Onda Senoidal\n"
@@ -63,13 +63,14 @@ flag_acomodacao = True
 flag_verifica_overshoot = True
 ##Para controle simples: tipo_controle = 0
 ##Para controle em cascata: tipo_controle = 1
-tipo_controle = 0
+tipo_controle = 1
 
 valor_entrada = 0
 periodo = 1
 offset = 0
 tensao_max = 3
 tensao_min = -3
+setpoint_ME = 0.0
 
 # Variaveis do controlador PID
 Derivator = 0.0
@@ -178,6 +179,7 @@ def readSensor(channel):
 
 
 def getAltura(channel):
+    global conn
     tensao = readSensor(channel)
     return float(tensao * 6.25)
 
@@ -196,6 +198,7 @@ def endConnection(channel):
     global conn
     try:
         conn.writeDA(channel, 0)
+        print("WriteDA")
         conn.closeServer()
     except:
         print 'Nao encerrou!'
@@ -218,6 +221,7 @@ def writeTensao(channel, volts):
         volts = 3
 
     conn.writeDA(channel, volts)
+    print("WriteDA volts: ", volts)
     return volts
 
 
@@ -575,7 +579,8 @@ class Controle(threading.Thread):
 
     def run(self):
         global x_axis_range, Start, nivel_tanque, channel, overshoot, overshootPercentual
-        global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid, Kp, Ki, Kd, taud, taui, PID
+        global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid
+        global Kp, Ki, Kd, taud, taui, PID, setpoint_ME
 
         tensao = 0.0
         read = 0.0
@@ -586,6 +591,9 @@ class Controle(threading.Thread):
         ##startConnection('10.13.99.69',20081)
         ##servidor:
         startConnection('localhost', 20081)
+        altura = float(getAltura(channel))
+        altura_tanque1 = float(getAltura(0))
+        altura_tanque2 = float(getAltura(1))
         while (Start):
             t = float(time.time() - t_init)
             # if (flag_malha == 0):
@@ -626,8 +634,6 @@ class Controle(threading.Thread):
                 elif(tipo_controle==1):
                     altura_tanque1 = float(getAltura(0))
                     altura_tanque2 = float(getAltura(1))
-                    ##plotar: set_point e setpoint_ME
-                    ##plotar: altura_tanque1 e altura_tanque2
                     setpoint_ME = controlePID_K_Cascata(set_point, altura_tanque2, T2_Kp, T2_Kd, T2_Ki, 0)
                     saida = controlePID_K_Cascata(setpoint_ME, altura_tanque1, T1_Kp, T1_Kd, T1_Ki, 1)
                     calculaOvershoot_Cascata(set_point, altura_tanque2, 0)
@@ -636,9 +642,9 @@ class Controle(threading.Thread):
                     calculaOvershoot_Cascata(setpoint_ME, altura_tanque1, 1)
                     calculaTempoSubida_Cascata(setpoint_ME, altura_tanque1, t, 1)
                     calculaTempoAcomodacao_Cascata(setpoint_ME, altura_tanque1, t, 1)
-                ##plotar: saida -sem travas
-                ##plotar: tensao -com travas
+                print "Tensao: ", tensao
                 tensao = writeTensao(0, saida)
+                print "Write tensao saida: ", saida
                 v = float(quanser.getTension())
                 read = float(readSensor(channel))
                 nivel_tanque = altura  # atualiza o nivel do tanque
@@ -681,9 +687,11 @@ class Interface(BoxLayout):
 
     ##CONTROLE
     def CD(self):
+        print("Clicou CD")
         global flag_controle
         flag_controle = 0
     def CC(self):
+        print("Clicou CC")
         global flag_controle
         flag_controle = 1
 
@@ -710,46 +718,46 @@ class Interface(BoxLayout):
         self.ids.periodo.disabled = False
 
     ##CONTROLE
-        ##CONTROLE CASCATA
-        def do_p(self):
-            global flag_pid
-            self.ids.ki.disabled = True
-            self.ids.kd.disabled = True
-            self.ids.taui.disabled = True
-            self.ids.taud.disabled = True
-            flag_pid = 0
+    ##CONTROLE CASCATA
+    def do_p(self):
+        global flag_pid
+        self.ids.ki.disabled = True
+        self.ids.kd.disabled = True
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
+        flag_pid = 0
 
-        def do_pd(self):
-            global flag_pid
-            self.ids.ki.disabled = True
-            self.ids.kd.disabled = False
-            self.ids.taui.disabled = True
-            self.ids.taud.disabled = True
-            flag_pid = 1
+    def do_pd(self):
+        global flag_pid
+        self.ids.ki.disabled = True
+        self.ids.kd.disabled = False
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
+        flag_pid = 1
 
-        def do_pi(self):
-            global flag_pid
-            self.ids.ki.disabled = False
-            self.ids.kd.disabled = True
-            self.ids.taui.disabled = True
-            self.ids.taud.disabled = True
-            flag_pid = 2
+    def do_pi(self):
+        global flag_pid
+        self.ids.ki.disabled = False
+        self.ids.kd.disabled = True
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
+        flag_pid = 2
 
-        def do_pid(self):
-            global flag_pid
-            self.ids.ki.disabled = False
-            self.ids.kd.disabled = False
-            self.ids.taui.disabled = True
-            self.ids.taud.disabled = True
-            flag_pid = 3
+    def do_pid(self):
+        global flag_pid
+        self.ids.ki.disabled = False
+        self.ids.kd.disabled = False
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
+        flag_pid = 3
 
-        def do_pi_d(self):
-            global flag_pid
-            self.ids.ki.disabled = False
-            self.ids.kd.disabled = False
-            self.ids.taui.disabled = True
-            self.ids.taud.disabled = True
-            flag_pid = 4
+    def do_pi_d(self):
+        global flag_pid
+        self.ids.ki.disabled = False
+        self.ids.kd.disabled = False
+        self.ids.taui.disabled = True
+        self.ids.taud.disabled = True
+        flag_pid = 4
     ##TANQUE 1
     def T1_do_p(self):
         global T1_flag_pid
@@ -1160,6 +1168,7 @@ class Interface(BoxLayout):
     ##FUNCOES PARA CONTROLE DA INTERFACE E CHAMADA DO PROGRAMA DE CONTROLE:
 
     def startsaida(self):
+        print("Clicou Start")
         global Start, flag, flag_subida, flag_acomodacao, flag_overshoot, flag_verifica_overshoot
         flag = True
         flag_subida = True
