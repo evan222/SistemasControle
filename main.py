@@ -113,6 +113,8 @@ contador = 0
 
 x_axis_range = 0.0
 nivel_tanque = 0.0
+nivel_tanque1 = 0.0
+nivel_tanque2 = 0.0
 channel = 0
 
 ##Variaveis de resposta do Sistema
@@ -578,7 +580,7 @@ class Controle(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        global x_axis_range, Start, nivel_tanque, channel, overshoot, overshootPercentual
+        global x_axis_range, Start, nivel_tanque1, nivel_tanque2, channel, overshoot, overshootPercentual
         global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid
         global Kp, Ki, Kd, taud, taui, PID, setpoint_ME
 
@@ -647,7 +649,8 @@ class Controle(threading.Thread):
                 print "Write tensao saida: ", saida
                 v = float(quanser.getTension())
                 read = float(readSensor(channel))
-                nivel_tanque = altura  # atualiza o nivel do tanque
+                nivel_tanque1 = altura_tanque1  # atualiza o nivel do tanque
+                nivel_tanque2 = altura_tanque2  # atualiza o nivel do tanque
                 x_axis_range = float(t)  # atualiza o range do grafico
                 atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
                 atualizaTempos(t)
@@ -671,11 +674,11 @@ class Interface(BoxLayout):
         self.contador = 0
 
         self.plotsaida = MeshLinePlot(color=[1, 0, 0, 1])
-        self.plotentrada = MeshLinePlot(color=[1, 0, 0, 1])
-        self.plotsetpoint = MeshLinePlot(color=[0, 0, 1, 1])
+        self.plottensao = MeshLinePlot(color=[1, 0, 1, 1])
+        self.plotsetpoint = MeshLinePlot(color=[0, 1, 1, 1])
         self.plotsetpointME = MeshLinePlot(color=[0, 0, 1, 1])
-        self.plotaltura1 = MeshLinePlot(color=[0, 128, 0, 1])
-        self.plotaltura2 = MeshLinePlot(color=[0, 128, 0, 1])
+        self.plotaltura1 = MeshLinePlot(color=[0, 1, 0, 1])
+        self.plotaltura2 = MeshLinePlot(color=[1, 1, 0, 1])
 
     # graph = Graph(xlabel='X', ylabel='Y', x_ticks_minor=5,x_ticks_major=25, y_ticks_major=1, y_grid_label=True, x_grid_label=True, 		#padding=5, x_grid=True, y_grid=True, xmin=-0, xmax=100, ymin=-1, ymax=1)
 
@@ -1180,7 +1183,7 @@ class Interface(BoxLayout):
         control = Controle()
         control.start()
         self.ids.graphsaida.add_plot(self.plotsaida)
-        self.ids.graphsaida.add_plot(self.plotentrada)
+        self.ids.graphsaida.add_plot(self.plottensao)
         self.ids.graphsaida.add_plot(self.plotsetpointME)
         self.ids.graphentrada.add_plot(self.plotsetpointME)
         self.ids.graphentrada.add_plot(self.plotsetpoint)
@@ -1190,23 +1193,47 @@ class Interface(BoxLayout):
         self.clockEntrada = Clock.schedule_interval(self.get_valueentrada, 0.001)
         self.clockUpdateX = Clock.schedule_interval(self.update_xaxis, 0.001)
         self.clockNivel = Clock.schedule_interval(self.update_nivel, 1)
+        self.clockOvershoot = Clock.schedule_interval(self.update_overshoot, 0.1)
 
 
     ##ATUALIZAR OVERSHOOT E TEMPOS AQUI
     ##usar essa funcao com timer para fazer update dos itens junto com a imagem do tanque
-    def update_nivel(self, *args):
-        global nivel_tanque, overshoot, overshootPercentual, tempo_subida, tempo_acomodacao
-        nivel = (nivel_tanque / 30) * 100
-        if(nivel>100):
-            nivel=100.0
-        if(nivel<0):
-            nivel=0.0
-        self.ids.nivel_tanque1.value = nivel
+    def update_overshoot(self, *args):
+        global overshoot, overshootPercentual, tempo_subida, tempo_acomodacao
+        global T1_overshoot, T1_overshootPercentual, T1_tempo_subida, T1_tempo_acomodacao
+        global T2_overshoot, T2_overshootPercentual, T2_tempo_subida, T2_tempo_acomodacao
 
         overshootPercentual = round(overshootPercentual, 2)
         self.ids.overshoot.text = str(overshootPercentual)
         self.ids.tempo_subida.text = str(round(tempo_subida,3))
         self.ids.tempo_acomodacao.text = str(round(tempo_acomodacao,3))
+
+        T1_overshootPercentual = round(T1_overshootPercentual, 2)
+        self.ids.T1_overshoot.text = str(T1_overshootPercentual)
+        self.ids.T1_tempo_subida.text = str(round(T1_tempo_subida, 3))
+        self.ids.T1_tempo_acomodacao.text = str(round(T1_tempo_acomodacao, 3))
+
+        T2_overshootPercentual = round(T2_overshootPercentual, 2)
+        self.ids.T2_overshoot.text = str(T2_overshootPercentual)
+        self.ids.T2_tempo_subida.text = str(round(T2_tempo_subida, 3))
+        self.ids.T2_tempo_acomodacao.text = str(round(T2_tempo_acomodacao, 3))
+
+
+    def update_nivel(self, *args):
+        global nivel_tanque1, nivel_tanque2
+        nivel1 = (nivel_tanque1 / 30) * 100
+        if(nivel1>100):
+            nivel1=100.0
+        if(nivel1<0):
+            nivel1=0.0
+        self.ids.nivel_tanque1.value = nivel1
+
+        nivel2 = (nivel_tanque2 / 30) * 100
+        if (nivel2 > 100):
+            nivel2 = 100.0
+        if (nivel2 < 0):
+            nivel2 = 0.0
+        self.ids.nivel_tanque2.value = nivel2
 
 
     ##funcao caso queira adequar os ranges de x:
@@ -1220,7 +1247,7 @@ class Interface(BoxLayout):
 
     def get_valuesaida(self, dt):
         self.plotsaida.points = [i for i in lista_saida]
-        self.plotentrada.points = [i for i in lista_tensao]
+        self.plottensao.points = [i for i in lista_tensao]
         self.plotsetpointME.points = [i for i in lista_setpoint_ME]
 
     def get_valueentrada(self, dt):
@@ -1232,7 +1259,7 @@ class Interface(BoxLayout):
 
 
     def stop(self):
-        global Start, tensao, lista_saida, lista_setpoint, lista_altura_tanque1
+        global Start, tensao, lista_saida, lista_setpoint, lista_altura_tanque1, lista_tensao, lista_setpoint_ME, lista_altura_tanque2
         global overshoot, overshootPercentual, antigo_setPoint
         global tempo_subida, tempo_acomodacao, tempo_acomodacao_inicial, tempo_final, tempo_inicial
         global T1_overshoot, T1_overshootPercentual, T1_antigo_setPoint
@@ -1243,22 +1270,30 @@ class Interface(BoxLayout):
         self.clockEntrada.cancel()
         self.clockUpdateX.cancel()
         self.clockNivel.cancel()
+        self.clockOvershoot.cancel()
         Start = False
+
         self.ids.graphsaida.remove_plot(self.plotsaida)
-        self.ids.graphentrada.remove_plot(self.plotentrada)
-        self.ids.graphsaida.remove_plot(self.plotsetpoint)
+        self.ids.graphsaida.remove_plot(self.plottensao)
+        self.ids.graphsaida.remove_plot(self.plotsetpointME)
         self.ids.graphentrada.remove_plot(self.plotsetpointME)
-        self.ids.graphentrada.remove_plot(self.plotaltura)
+        self.ids.graphentrada.remove_plot(self.plotsetpoint)
+        self.ids.graphentrada.remove_plot(self.plotaltura1)
+        self.ids.graphentrada.remove_plot(self.plotaltura2)
         self.ids.graphsaida._clear_buffer()
         self.ids.graphentrada._clear_buffer()
-        while len(tensao) > 0: tensao.pop()
+        while len(lista_tensao) > 0: lista_tensao.pop()
         while len(lista_saida) > 0: lista_saida.pop()
         while len(lista_setpoint) > 0: lista_setpoint.pop()
+        while len(lista_setpoint_ME) > 0: lista_setpoint_ME.pop()
         while len(lista_altura_tanque1) > 0: lista_altura_tanque1.pop()
-        tensao = [(0, 0)]
+        while len(lista_altura_tanque2) > 0: lista_altura_tanque2.pop()
+        lista_tensao = [(0, 0)]
         lista_saida = [(0, 0)]
         lista_setpoint = [(0, 0)]
+        lista_setpoint_ME = [(0, 0)]
         lista_altura_tanque1 = [(0, 0)]
+        lista_altura_tanque2 = [(0, 0)]
         overshootPercentual = 0.0
         overshoot = 0.0
         antigo_setPoint = 0.0

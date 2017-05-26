@@ -812,10 +812,11 @@ Interface:
 
 
             ##LEGENDAS
+
 			BoxLayout:
 				canvas.before:
 					Color:
-						rgba: 0, 0, 0, 1
+						rgba: 1, 0, 0, 1
 					Rectangle:
 						pos: self.pos
 						size: self.size
@@ -826,7 +827,36 @@ Interface:
 					id:legenda
 					bold: True
 					color: 1,1,1,1.0
-					text: 'Legenda:'
+					text: 'Vp (saida)'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 1,0,1,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text_size: self.size
+					valign: 'middle'
+					halign: 'center'
+					text: 'Vps(tensao)'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 0,1,1,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text_size: self.size
+					valign: 'middle'
+					halign: 'center'
+					#text: 'Tensão'
+					text: 'Setpoint'
 				Label:
 					canvas.before:
 						Color:
@@ -840,11 +870,11 @@ Interface:
 					text_size: self.size
 					valign: 'middle'
 					halign: 'center'
-					text: 'Set Point'
+					text: 'Setpoint ME'
 				Label:
 					canvas.before:
 						Color:
-							rgba: 1,0,0,1.0
+							rgba: 0,1,0,1.0
 						Rectangle:
 							pos: self.pos
 							size: self.size
@@ -854,12 +884,11 @@ Interface:
 					text_size: self.size
 					valign: 'middle'
 					halign: 'center'
-					#text: 'Tensão'
-					text: 'Altura'
+					text: 'Altura T1'
 				Label:
 					canvas.before:
 						Color:
-							rgba: 0,128,0,1.0
+							rgba: 1,1,0,1.0
 						Rectangle:
 							pos: self.pos
 							size: self.size
@@ -869,7 +898,7 @@ Interface:
 					text_size: self.size
 					valign: 'middle'
 					halign: 'center'
-					#text: 'Altura'
+					text: 'Altura T2'
 		
 		
 		#TANQUES
