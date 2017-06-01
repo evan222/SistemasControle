@@ -49,14 +49,21 @@ Interface:
                         background_normal: 'ondaup.png'
                         background_down: 'ondadown.png'
                         text: "Controle Direto"
-                        #on_press: root.CD()
+                        on_press: root.CD()
                     ToggleButton:
                         id: controle_indireto
                         group: 'controle'
                         background_normal: 'ondaup.png'
                         background_down: 'ondadown.png'
                         text: "Controle Cascata"
-                        #on_press: root.CC()
+                        on_press: root.CC()
+                    ToggleButton:
+                        id: controle_observador
+                        group: 'controle'
+                        background_normal: 'ondaup.png'
+                        background_down: 'ondadown.png'
+                        text: "Observador"
+                        on_press: root.Obs()
 
                 #ONDA
                 BoxLayout:
@@ -142,390 +149,726 @@ Interface:
 				size_hint: [1,.8]
 				orientation: "horizontal"
 
-				#TANQUE
-                BoxLayout:
-                    size_hint: [1,1]
-                    orientation: "vertical"
+			    TabbedPanel:
+                    size_hint: 1, 1
+                    pos_hint: {'center_x': .5, 'center_y': .5}
+                    do_default_tab: False
 
-                    Button:
-                        id: tanque1
-                        state: 'down'
-                        background_normal: 'ondaup.png'
-                        background_down: 'ondadown.png'
-                        text: "Tanque 1"
+                    TabbedPanelItem:
+                        text: "C. Cascata"
 
-                    #PID
-                    BoxLayout:
-                        size_hint: [1,0.8]
-                        orientation: "horizontal"
-                        ToggleButton:
-                            id: T1_p
-                            group: 'T1_pid'
-                            state: 'down'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "P"
-                            on_press: root.T1_do_p()
-                        ToggleButton:
-                            id: T1_pd
-                            group: 'T1_pid'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "PD"
-                            on_press: root.T1_do_pd()
-                        ToggleButton:
-                            id: T1_pi
-                            group: 'T1_pid'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "PI"
-                            on_press: root.T1_do_pi()
-                        ToggleButton:
-                            id: T1_pid
-                            group: 'T1_pid'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "PID"
-                            on_press: root.T1_do_pid()
-                        ToggleButton:
-                            id: T1_pi_d
-                            group: 'T1_pid'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "PI-D"
-                            on_press: root.T1_do_pi_d()
+                        BoxLayout:
+				            size_hint: [1,1]
+				            orientation: "horizontal"
+                            #TANQUE
+                            BoxLayout:
+                                size_hint: [1,1]
+                                orientation: "vertical"
 
-                    #INPUTS
-                    BoxLayout:
-                        size_hint: [1,2]
-                        orientation: "horizontal"
-                        GridLayout:
-                            rows: 5
-                            cols: 1
-                            Label:
-                                id: T1_overshoot_label
-                                text: "Overshoot (%): "
-                                text_size: self.size
-                                valign: 'middle'
-					            halign: 'center'
-                            Label:
-                                id: T1_tempo_subida_label
-                                text: "Tempo de Subida (s): "
-                                text_size: self.size
-                                valign: 'middle'
-					            halign: 'center'
-                            Label:
-                                id: T1_tempo_acomodacao_label
-                                text: "Tempo de Acomodação (s): "
-                                text_size: self.size
-                                valign: 'middle'
-					            halign: 'center'
-					        Label:
-                                id: none
-                                text: "-"
-                                text_size: self.size
-					            valign: 'middle'
-					            halign: 'center'
-                            Label:
-                                id: none
-                                text: "-"
-                                text_size: self.size
-					            valign: 'middle'
-					            halign: 'center'
+                                Button:
+                                    id: tanque1
+                                    state: 'down'
+                                    background_normal: 'ondaup.png'
+                                    background_down: 'ondadown.png'
+                                    text: "Tanque 1"
 
-                        GridLayout:
-                            rows: 5
-                            cols: 3
+                                #PID
+                                BoxLayout:
+                                    size_hint: [1,0.8]
+                                    orientation: "horizontal"
+                                    ToggleButton:
+                                        id: T1_p
+                                        group: 'T1_pid'
+                                        state: 'down'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "P"
+                                        on_press: root.T1_do_p()
+                                    ToggleButton:
+                                        id: T1_pd
+                                        group: 'T1_pid'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "PD"
+                                        on_press: root.T1_do_pd()
+                                    ToggleButton:
+                                        id: T1_pi
+                                        group: 'T1_pid'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "PI"
+                                        on_press: root.T1_do_pi()
+                                    ToggleButton:
+                                        id: T1_pid
+                                        group: 'T1_pid'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "PID"
+                                        on_press: root.T1_do_pid()
+                                    ToggleButton:
+                                        id: T1_pi_d
+                                        group: 'T1_pid'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "PI-D"
+                                        on_press: root.T1_do_pi_d()
 
-                            TextInput:
-                                id: T1_overshoot
-                                multiline: False
-                                disabled: False
-                                readonly: True
-                                #input_filter: 'float'
-                                text_size: self.size
-                                text: '-'
-                            Label:
-                                id: kpL
-                                text: "KP"
-                            TextInput:
-                                id: T1_kp
-                                multiline: False
-                                text: '0'
+                                #INPUTS
+                                BoxLayout:
+                                    size_hint: [1,2]
+                                    orientation: "horizontal"
+                                    GridLayout:
+                                        rows: 5
+                                        cols: 1
+                                        Label:
+                                            id: T1_overshoot_label
+                                            text: "Overshoot (%): "
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+                                        Label:
+                                            id: T1_tempo_subida_label
+                                            text: "Tempo de Subida (s): "
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+                                        Label:
+                                            id: T1_tempo_acomodacao_label
+                                            text: "Tempo de Acomodação (s): "
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+                                        Label:
+                                            id: none
+                                            text: "-"
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+                                        Label:
+                                            id: none
+                                            text: "-"
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
 
-                            TextInput:
-                                id: T1_tempo_subida
-                                multiline: False
-                                disabled: False
-                                readonly: True
-                                #input_filter: 'float'
-                                text_size: self.size
-                                text: '-'
-                            ToggleButton:
-                                id: T1_ki_label
-                                group: 'T1_integrativo'
-                                state: 'down'
-                                text: "KI"
-                                background_normal: 'ondaup.png'
-                                background_down: 'ondadown.png'
-                                on_press: root.T1_pressKI()
-                            TextInput:
-                                id: T1_ki
-                                multiline: False
-                                disabled: True
-                                text: '0'
+                                    GridLayout:
+                                        rows: 5
+                                        cols: 3
 
-                            TextInput:
-                                id: T1_tempo_acomodacao
-                                multiline: False
-                                disabled: False
-                                readonly: True
-                                #input_filter: 'float'
-                                text_size: self.size
-                                text: '-'
-                            ToggleButton:
-                                id: T1_kd_label
-                                group: 'T1_derivativo'
-                                state: 'down'
-                                text: "KD"
-                                background_normal: 'ondaup.png'
-                                background_down: 'ondadown.png'
-                                on_press: root.T1_pressKD()
-                            TextInput:
-                                id: T1_kd
-                                multiline: False
-                                disabled: True
-                                text: '0'
+                                        TextInput:
+                                            id: T1_overshoot
+                                            multiline: False
+                                            disabled: False
+                                            readonly: True
+                                            #input_filter: 'float'
+                                            text_size: self.size
+                                            text: '-'
+                                        Label:
+                                            id: kpL
+                                            text: "KP"
+                                        TextInput:
+                                            id: T1_kp
+                                            multiline: False
+                                            text: '0'
 
-                            TextInput:
-                                id: none
-                                multiline: False
-                                text: '-'
-                            ToggleButton:
-                                id: T1_taui_label
-                                group: 'T1_integrativo'
-                                text: "Ti"
-                                background_normal: 'ondaup.png'
-                                background_down: 'ondadown.png'
-                                on_press: root.T1_pressTI()
-                            TextInput:
-                                id: T1_taui
-                                multiline: False
-                                disabled: True
-                                text: '0'
+                                        TextInput:
+                                            id: T1_tempo_subida
+                                            multiline: False
+                                            disabled: False
+                                            readonly: True
+                                            #input_filter: 'float'
+                                            text_size: self.size
+                                            text: '-'
+                                        ToggleButton:
+                                            id: T1_ki_label
+                                            group: 'T1_integrativo'
+                                            state: 'down'
+                                            text: "KI"
+                                            background_normal: 'ondaup.png'
+                                            background_down: 'ondadown.png'
+                                            on_press: root.T1_pressKI()
+                                        TextInput:
+                                            id: T1_ki
+                                            multiline: False
+                                            disabled: True
+                                            text: '0'
 
-                            TextInput:
-                                id: none
-                                multiline: False
-                                text: '-'
-                            ToggleButton:
-                                id: T1_taud_label
-                                group: 'T1_derivativo'
-                                text: "Td"
-                                background_normal: 'ondaup.png'
-                                background_down: 'ondadown.png'
-                                on_press: root.T1_pressTD()
-                            TextInput:
-                                id: T1_taud
-                                multiline: False
-                                disabled: True
-                                text: '0'
+                                        TextInput:
+                                            id: T1_tempo_acomodacao
+                                            multiline: False
+                                            disabled: False
+                                            readonly: True
+                                            #input_filter: 'float'
+                                            text_size: self.size
+                                            text: '-'
+                                        ToggleButton:
+                                            id: T1_kd_label
+                                            group: 'T1_derivativo'
+                                            state: 'down'
+                                            text: "KD"
+                                            background_normal: 'ondaup.png'
+                                            background_down: 'ondadown.png'
+                                            on_press: root.T1_pressKD()
+                                        TextInput:
+                                            id: T1_kd
+                                            multiline: False
+                                            disabled: True
+                                            text: '0'
 
-##--------------------------TANQUE 2----------------------------------------
+                                        TextInput:
+                                            id: none
+                                            multiline: False
+                                            text: '-'
+                                        ToggleButton:
+                                            id: T1_taui_label
+                                            group: 'T1_integrativo'
+                                            text: "Ti"
+                                            background_normal: 'ondaup.png'
+                                            background_down: 'ondadown.png'
+                                            on_press: root.T1_pressTI()
+                                        TextInput:
+                                            id: T1_taui
+                                            multiline: False
+                                            disabled: True
+                                            text: '0'
+
+                                        TextInput:
+                                            id: none
+                                            multiline: False
+                                            text: '-'
+                                        ToggleButton:
+                                            id: T1_taud_label
+                                            group: 'T1_derivativo'
+                                            text: "Td"
+                                            background_normal: 'ondaup.png'
+                                            background_down: 'ondadown.png'
+                                            on_press: root.T1_pressTD()
+                                        TextInput:
+                                            id: T1_taud
+                                            multiline: False
+                                            disabled: True
+                                            text: '0'
+
+                            #TANQUE2
+                            BoxLayout:
+                                size_hint: [1,1]
+                                orientation: "vertical"
+
+                                Button:
+                                    id: tanque2
+                                    state: 'down'
+                                    background_normal: 'ondaup.png'
+                                    background_down: 'ondadown.png'
+                                    text: "Tanque 2"
+
+                                #PID
+                                BoxLayout:
+                                    size_hint: [1,0.8]
+                                    orientation: "horizontal"
+                                    ToggleButton:
+                                        id: T2_p
+                                        group: 'T2_pid'
+                                        state: 'down'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "P"
+                                        on_press: root.T2_do_p()
+                                    ToggleButton:
+                                        id: T2_pd
+                                        group: 'T2_pid'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "PD"
+                                        on_press: root.T2_do_pd()
+                                    ToggleButton:
+                                        id: T2_pi
+                                        group: 'T2_pid'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "PI"
+                                        on_press: root.T2_do_pi()
+                                    ToggleButton:
+                                        id: T2_pid
+                                        group: 'T2_pid'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "PID"
+                                        on_press: root.T2_do_pid()
+                                    ToggleButton:
+                                        id: T2_pi_d
+                                        group: 'T2_pid'
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        text: "PI-D"
+                                        on_press: root.T2_do_pi_d()
+
+                                #INPUTS
+                                BoxLayout:
+                                    size_hint: [1,2]
+                                    orientation: "horizontal"
+                                    GridLayout:
+                                        rows: 5
+                                        cols: 1
+                                        Label:
+                                            id: T2_overshoot_label
+                                            text: "Overshoot (%): "
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+                                        Label:
+                                            id: T2_tempo_subida_label
+                                            text: "Tempo de Subida (s): "
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+                                        Label:
+                                            id: T2_tempo_acomodacao_label
+                                            text: "Tempo de Acomodação (s): "
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+                                        Label:
+                                            id: none
+                                            text: "-"
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+                                        Label:
+                                            id: none
+                                            text: "-"
+                                            text_size: self.size
+                                            valign: 'middle'
+                                            halign: 'center'
+
+                                    GridLayout:
+                                        rows: 5
+                                        cols: 3
+
+                                        TextInput:
+                                            id: T2_overshoot
+                                            multiline: False
+                                            disabled: False
+                                            readonly: True
+                                            #input_filter: 'float'
+                                            text_size: self.size
+                                            text: '-'
+                                        Label:
+                                            id: kpL
+                                            text: "KP"
+                                        TextInput:
+                                            id: T2_kp
+                                            multiline: False
+                                            text: '0'
+
+                                        TextInput:
+                                            id: T2_tempo_subida
+                                            multiline: False
+                                            disabled: False
+                                            readonly: True
+                                            #input_filter: 'float'
+                                            text_size: self.size
+                                            text: '-'
+                                        ToggleButton:
+                                            id: T2_ki_label
+                                            group: 'T2_integrativo'
+                                            state: 'down'
+                                            text: "KI"
+                                            background_normal: 'ondaup.png'
+                                            background_down: 'ondadown.png'
+                                            on_press: root.T2_pressKI()
+                                        TextInput:
+                                            id: T2_ki
+                                            multiline: False
+                                            disabled: True
+                                            text: '0'
+
+                                        TextInput:
+                                            id: T2_tempo_acomodacao
+                                            multiline: False
+                                            disabled: False
+                                            readonly: True
+                                            #input_filter: 'float'
+                                            text_size: self.size
+                                            text: '-'
+                                        ToggleButton:
+                                            id: T2_kd_label
+                                            group: 'T2_derivativo'
+                                            state: 'down'
+                                            text: "KD"
+                                            background_normal: 'ondaup.png'
+                                            background_down: 'ondadown.png'
+                                            on_press: root.T2_pressKD()
+                                        TextInput:
+                                            id: T2_kd
+                                            multiline: False
+                                            disabled: True
+                                            text: '0'
+
+                                        TextInput:
+                                            id: none
+                                            multiline: False
+                                            text: '-'
+                                        ToggleButton:
+                                            id: T2_taui_label
+                                            group: 'integrativo'
+                                            text: "Ti"
+                                            background_normal: 'ondaup.png'
+                                            background_down: 'ondadown.png'
+                                            on_press: root.T2_pressTI()
+                                        TextInput:
+                                            id: T2_taui
+                                            multiline: False
+                                            disabled: True
+                                            #readonly: True
+                                            text: '0'
+
+                                        TextInput:
+                                            id: none
+                                            multiline: False
+                                            text: '-'
+                                        ToggleButton:
+                                            id: T2_taud_label
+                                            group: 'derivativo'
+                                            text: "Td"
+                                            background_normal: 'ondaup.png'
+                                            background_down: 'ondadown.png'
+                                            on_press: root.T2_pressTD()
+                                        TextInput:
+                                            id: T2_taud
+                                            multiline: False
+                                            disabled: True
+                                            text: '0'
 
 
-				BoxLayout:
-					size_hint: [1,1]
-					orientation: "vertical"
 
-					Button:
-						id: tanque2
-						state: 'down'
-						background_normal: 'ondaup.png'
-						background_down: 'ondadown.png'
-						text: "Tanque 2"
+                    TabbedPanelItem:
+                        text: "C. Direto"
 
-					#PID
-                    BoxLayout:
-                        size_hint: [1,0.8]
-                        orientation: "horizontal"
-                        ToggleButton:
-                            id: T2_p
-                            group: 'T2_pid'
-                            state: 'down'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "P"
-                            on_press: root.T2_do_p()
-                        ToggleButton:
-                            id: T2_pd
-                            group: 'T2_pid'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "PD"
-                            on_press: root.T2_do_pd()
-                        ToggleButton:
-                            id: T2_pi
-                            group: 'T2_pid'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "PI"
-                            on_press: root.T2_do_pi()
-                        ToggleButton:
-                            id: T2_pid
-                            group: 'T2_pid'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "PID"
-                            on_press: root.T2_do_pid()
-                        ToggleButton:
-                            id: T2_pi_d
-                            group: 'T2_pid'
-                            background_normal: 'ondaup.png'
-                            background_down: 'ondadown.png'
-                            text: "PI-D"
-                            on_press: root.T2_do_pi_d()
+        ##--------------------------DIRETO---------------------------------------
 
-                    #INPUTS
-                    BoxLayout:
-                        size_hint: [1,2]
-                        orientation: "horizontal"
-                        GridLayout:
-                            rows: 5
-                            cols: 1
-                            Label:
-                                id: T2_overshoot_label
-                                text: "Overshoot (%): "
-                                text_size: self.size
-                                valign: 'middle'
-					            halign: 'center'
-                            Label:
-                                id: T2_tempo_subida_label
-                                text: "Tempo de Subida (s): "
-                                text_size: self.size
-                                valign: 'middle'
-					            halign: 'center'
-                            Label:
-                                id: T2_tempo_acomodacao_label
-                                text: "Tempo de Acomodação (s): "
-                                text_size: self.size
-                                valign: 'middle'
-					            halign: 'center'
-					        Label:
-                                id: none
-                                text: "-"
-                                text_size: self.size
-					            valign: 'middle'
-					            halign: 'center'
-                            Label:
-                                id: none
-                                text: "-"
-                                text_size: self.size
-					            valign: 'middle'
-					            halign: 'center'
+                        BoxLayout:
+                            size_hint: [1,1]
+                            orientation: "vertical"
 
-                        GridLayout:
-                            rows: 5
-                            cols: 3
+                            #PID
+                            BoxLayout:
+                                size_hint: [1,0.8]
+                                orientation: "horizontal"
+                                ToggleButton:
+                                    id: p
+                                    group: 'pid'
+                                    state: 'down'
+                                    background_normal: 'ondaup.png'
+                                    background_down: 'ondadown.png'
+                                    text: "P"
+                                    on_press: root.do_p()
+                                ToggleButton:
+                                    id: pd
+                                    group: 'pid'
+                                    background_normal: 'ondaup.png'
+                                    background_down: 'ondadown.png'
+                                    text: "PD"
+                                    on_press: root.do_pd()
+                                ToggleButton:
+                                    id: pi
+                                    group: 'pid'
+                                    background_normal: 'ondaup.png'
+                                    background_down: 'ondadown.png'
+                                    text: "PI"
+                                    on_press: root.do_pi()
+                                ToggleButton:
+                                    id: _pid
+                                    group: 'pid'
+                                    background_normal: 'ondaup.png'
+                                    background_down: 'ondadown.png'
+                                    text: "PID"
+                                    on_press: root.do_pid()
+                                ToggleButton:
+                                    id: pi_d
+                                    group: 'pid'
+                                    background_normal: 'ondaup.png'
+                                    background_down: 'ondadown.png'
+                                    text: "PI-D"
+                                    on_press: root.do_pi_d()
 
-                            TextInput:
-                                id: T2_overshoot
-                                multiline: False
-                                disabled: False
-                                readonly: True
-                                #input_filter: 'float'
-                                text_size: self.size
-                                text: '-'
-                            Label:
-                                id: kpL
-                                text: "KP"
-                            TextInput:
-                                id: T2_kp
-                                multiline: False
-                                text: '0'
+                            #INPUTS
+                            BoxLayout:
+                                size_hint: [1,2]
+                                orientation: "horizontal"
+                                GridLayout:
+                                    rows: 5
+                                    cols: 1
+                                    Label:
+                                        id: overshoot_label
+                                        text: "Overshoot (%): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: tempo_subida_label
+                                        text: "Tempo de Subida (s): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: tempo_acomodacao_label
+                                        text: "Tempo de Acomodação (s): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: none
+                                        text: "-"
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: none
+                                        text: "-"
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
 
-                            TextInput:
-                                id: T2_tempo_subida
-                                multiline: False
-                                disabled: False
-                                readonly: True
-                                #input_filter: 'float'
-                                text_size: self.size
-                                text: '-'
-                            ToggleButton:
-                                id: T2_ki_label
-                                group: 'T2_integrativo'
-                                state: 'down'
-                                text: "KI"
-                                background_normal: 'ondaup.png'
-                                background_down: 'ondadown.png'
-                                on_press: root.T2_pressKI()
-                            TextInput:
-                                id: T2_ki
-                                multiline: False
-                                disabled: True
-                                text: '0'
+                                GridLayout:
+                                    rows: 5
+                                    cols: 3
 
-                            TextInput:
-                                id: T2_tempo_acomodacao
-                                multiline: False
-                                disabled: False
-                                readonly: True
-                                #input_filter: 'float'
-                                text_size: self.size
-                                text: '-'
-                            ToggleButton:
-                                id: T2_kd_label
-                                group: 'T2_derivativo'
-                                state: 'down'
-                                text: "KD"
-                                background_normal: 'ondaup.png'
-                                background_down: 'ondadown.png'
-                                on_press: root.T2_pressKD()
-                            TextInput:
-                                id: T2_kd
-                                multiline: False
-                                disabled: True
-                                text: '0'
+                                    TextInput:
+                                        id: overshoot
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    Label:
+                                        id: kpL
+                                        text: "KP"
+                                    TextInput:
+                                        id: kp
+                                        multiline: False
+                                        text: '0'
 
-                            TextInput:
-                                id: none
-                                multiline: False
-                                text: '-'
-                            ToggleButton:
-                                id: T2_taui_label
-                                group: 'integrativo'
-                                text: "Ti"
-                                background_normal: 'ondaup.png'
-                                background_down: 'ondadown.png'
-                                on_press: root.T2_pressTI()
-                            TextInput:
-                                id: T2_taui
-                                multiline: False
-                                disabled: True
-                                #readonly: True
-                                text: '0'
+                                    TextInput:
+                                        id: tempo_subida
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    ToggleButton:
+                                        id: ki_label
+                                        group: 'integrativo'
+                                        state: 'down'
+                                        text: "KI"
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        on_press: root.pressKI()
+                                    TextInput:
+                                        id: ki
+                                        multiline: False
+                                        disabled: True
+                                        text: '0'
 
-                            TextInput:
-                                id: none
-                                multiline: False
-                                text: '-'
-                            ToggleButton:
-                                id: T2_taud_label
-                                group: 'derivativo'
-                                text: "Td"
-                                background_normal: 'ondaup.png'
-                                background_down: 'ondadown.png'
-                                on_press: root.T2_pressTD()
-                            TextInput:
-                                id: T2_taud
-                                multiline: False
-                                disabled: True
-                                text: '0'
+                                    TextInput:
+                                        id: tempo_acomodacao
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    ToggleButton:
+                                        id: kd_label
+                                        group: 'derivativo'
+                                        state: 'down'
+                                        text: "KD"
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        on_press: root.pressKD()
+                                    TextInput:
+                                        id: kd
+                                        multiline: False
+                                        disabled: True
+                                        text: '0'
 
+                                    TextInput:
+                                        id: none
+                                        multiline: False
+                                        text: '-'
+                                    ToggleButton:
+                                        id: taui_label
+                                        group: 'integrativo'
+                                        text: "Ti"
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        on_press: root.pressTI()
+                                    TextInput:
+                                        id: taui
+                                        multiline: False
+                                        disabled: True
+                                        #readonly: True
+                                        text: '0'
+
+                                    TextInput:
+                                        id: none
+                                        multiline: False
+                                        text: '-'
+                                    ToggleButton:
+                                        id: taud_label
+                                        group: 'derivativo'
+                                        text: "Td"
+                                        background_normal: 'ondaup.png'
+                                        background_down: 'ondadown.png'
+                                        on_press: root.pressTD()
+                                    TextInput:
+                                        id: taud
+                                        multiline: False
+                                        disabled: True
+                                        text: '0'
 
 
-					
+
+					TabbedPanelItem:
+                        text: "Observador"
+
+        ##--------------------------OBSERVADOR---------------------------------------
+
+                        BoxLayout:
+                            size_hint: [1,1]
+                            orientation: "vertical"
+
+                            #PID
+                            BoxLayout:
+                                size_hint: [1,0.8]
+                                orientation: "horizontal"
+                                Label:
+                                    id: cp
+                                    text: "Controle Proporcional"
+
+
+                            #INPUTS
+                            BoxLayout:
+                                size_hint: [1,2]
+                                orientation: "horizontal"
+                                GridLayout:
+                                    rows: 5
+                                    cols: 1
+                                    Label:
+                                        id: overshoot_label
+                                        text: "Overshoot (%): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: tempo_subida_label
+                                        text: "Tempo de Subida (s): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: tempo_acomodacao_label
+                                        text: "Tempo de Acomodação (s): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: none
+                                        text: "-"
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: none
+                                        text: "-"
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+
+                                GridLayout:
+                                    rows: 5
+                                    cols: 3
+
+                                    TextInput:
+                                        id: overshoot
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    Label:
+                                        id: kpL
+                                        text: "KP"
+                                    TextInput:
+                                        id: kp
+                                        multiline: False
+                                        text: '0'
+
+                                    TextInput:
+                                        id: tempo_subida
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    Label:
+                                        id: polo1_label
+                                        text: "Polo 1"
+                                    TextInput:
+                                        id: polo1
+                                        multiline: False
+                                        disabled: True
+                                        text: '0'
+
+                                    TextInput:
+                                        id: tempo_acomodacao
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    Label:
+                                        id: polo2_label
+                                        text: "Polo 2"
+                                    TextInput:
+                                        id: polo2
+                                        multiline: False
+                                        disabled: True
+                                        text: '0'
+
+                                    TextInput:
+                                        id: none
+                                        multiline: False
+                                        text: '-'
+                                    Label:
+                                        id: ganho1_label
+                                        text: "Ganho 1"
+                                    TextInput:
+                                        id: ganho1
+                                        multiline: False
+                                        disabled: True
+                                        #readonly: True
+                                        text: '0'
+
+                                    TextInput:
+                                        id: none
+                                        multiline: False
+                                        text: '-'
+                                    Label:
+                                        id: ganho2_label
+                                        text: "Ganho 2"
+                                    TextInput:
+                                        id: ganho2
+                                        multiline: False
+                                        disabled: True
+                                        text: '0'
+
+
+
 			BoxLayout:
 				size_hint: [1,0.2]
 				orientation: "horizontal"
@@ -614,10 +957,11 @@ Interface:
 
 
             ##LEGENDAS
+
 			BoxLayout:
 				canvas.before:
 					Color:
-						rgba: 0, 0, 0, 1
+						rgba: 1, 0, 0, 1
 					Rectangle:
 						pos: self.pos
 						size: self.size
@@ -628,7 +972,36 @@ Interface:
 					id:legenda
 					bold: True
 					color: 1,1,1,1.0
-					text: 'Legenda:'
+					text: 'Vp (saida)'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 1,0,1,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text_size: self.size
+					valign: 'middle'
+					halign: 'center'
+					text: 'Vps(tensao)'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 0,1,1,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text_size: self.size
+					valign: 'middle'
+					halign: 'center'
+					#text: 'Tensão'
+					text: 'Setpoint'
 				Label:
 					canvas.before:
 						Color:
@@ -642,11 +1015,11 @@ Interface:
 					text_size: self.size
 					valign: 'middle'
 					halign: 'center'
-					text: 'Set Point'
+					text: 'Setpoint ME'
 				Label:
 					canvas.before:
 						Color:
-							rgba: 1,0,0,1.0
+							rgba: 0,1,0,1.0
 						Rectangle:
 							pos: self.pos
 							size: self.size
@@ -656,12 +1029,11 @@ Interface:
 					text_size: self.size
 					valign: 'middle'
 					halign: 'center'
-					#text: 'Tensão'
-					text: 'Altura'
+					text: 'Altura T1'
 				Label:
 					canvas.before:
 						Color:
-							rgba: 0,128,0,1.0
+							rgba: 1,1,0,1.0
 						Rectangle:
 							pos: self.pos
 							size: self.size
@@ -671,7 +1043,7 @@ Interface:
 					text_size: self.size
 					valign: 'middle'
 					halign: 'center'
-					#text: 'Altura'
+					text: 'Altura T2'
 		
 		
 		#TANQUES
