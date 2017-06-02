@@ -697,6 +697,10 @@ class Interface(BoxLayout):
         print("Clicou CC")
         global flag_controle
         flag_controle = 1
+    def Obs(self):
+        print("Clicou Obs")
+        global flag_controle
+        flag_controle = 2
 
     ##ONDAS
     def degrau(self):
