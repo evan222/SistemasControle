@@ -841,28 +841,28 @@ Interface:
                                         text: '0'
 
                                     TextInput:
-                                        id: none
+                                        id: polo1_real
                                         multiline: False
-                                        text: '-'
+                                        text: '0'
                                     Label:
                                         id: polo1_label
-                                        text: "+ i"
+                                        text: "i"
                                     TextInput:
-                                        id: polo1
+                                        id: polo1_img
                                         multiline: False
                                         disabled: False
                                         #readonly: True
                                         text: '0'
 
                                     TextInput:
-                                        id: none
+                                        id: polo2_real
                                         multiline: False
-                                        text: '-'
+                                        text: '0'
                                     Label:
                                         id: polo2_label
-                                        text: " + i"
+                                        text: "i"
                                     TextInput:
-                                        id: polo2
+                                        id: polo2_img
                                         multiline: False
                                         disabled: False
                                         text: '0'
@@ -1005,7 +1005,7 @@ Interface:
 				Label:
 					canvas.before:
 						Color:
-							rgba: 0,0,1,1.0
+							rgba: 0,0.5,0,1.0
 						Rectangle:
 							pos: self.pos
 							size: self.size
@@ -1015,7 +1015,21 @@ Interface:
 					text_size: self.size
 					valign: 'middle'
 					halign: 'center'
-					text: 'Setpoint ME'
+					text: 'Nivel T1'
+				Label:
+					canvas.before:
+						Color:
+							rgba: 0.5,0.5,0,1.0
+						Rectangle:
+							pos: self.pos
+							size: self.size
+					id:legenda
+					bold: True
+					color: 1,1,1,1.0
+					text_size: self.size
+					valign: 'middle'
+					halign: 'center'
+					text: 'Nivel T2'
 				Label:
 					canvas.before:
 						Color:

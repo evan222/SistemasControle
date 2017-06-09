@@ -109,7 +109,8 @@ Start = False
 lista_saida = [(0, 0)]
 lista_tensao = [(0, 0)]
 lista_setpoint = [(0, 0)]
-lista_setpoint_ME = [(0, 0)]
+lista_nivel_estimado_T1 = [(0, 0)]
+lista_nivel_estimado_T2 = [(0, 0)]
 lista_altura_tanque1 = [(0, 0)]
 lista_altura_tanque2 = [(0, 0)]
 contador = 0
@@ -184,6 +185,8 @@ nivel_tanque1_estimado = 0.0
 nivel_tanque2_estimado = 0.0
 p1 = Complex.Complex(0,0)
 p2 = Complex.Complex(0,0)
+YE = Matrix.Matrix(1,2)
+Y = Matrix.Matrix(1,2)
 
 planta = Planta.Planta()
 
@@ -311,7 +314,10 @@ def controlePID_K_Cascata(set_point, current_value, Kp, Kd, Ki, tipo_malha):
     D_value = 0
 
     error = set_point - current_value
-    margem = abs((set_point - current_value) / set_point)
+    if (set_point==0):
+        margem = 0
+    else:
+        margem = abs((set_point - current_value) / set_point)
 
     # print "error", error
 
@@ -568,7 +574,7 @@ def atualizaTempos(t):
 def setTipoControle(tipo):
     global tipo_controle
     if(tipo==0 or tipo==1):
-		tipo_controle = tipo
+        tipo_controle = tipo
 
 def formulaAckermman(p1, p2):
 	global L, planta
@@ -577,32 +583,33 @@ def formulaAckermman(p1, p2):
 		c=p1.getReal()*p2.getReal()+p1.getIm()*p2.getIm()
 	else:
 		c=p1.getReal()*p2.getReal()
-	q = A*A + b*A + c*Matrix.unit_matrix(2)
+	q = planta.getA()*planta.getA() + b*planta.getA() + c*Matrix.unit_matrix(2)
 	L = q*planta.getVin().Matrix.Matrix([[0],[1]])
 
 def observadorCalculo(nivel_tanque1, nivel_tanque2, saida):
-	global XE, XEanterior, nivel_tanque1_estimado, nivel_tanque2_estimado
+	global YE, XE, XEanterior, nivel_tanque1_estimado, nivel_tanque2_estimado, Y
 	u = saida
-	Y = Matrix.Matrix([0, nivel_tanque2])
-	observadorProcessa(Y,u)
+	Y = Matrix.Matrix([[0, nivel_tanque2]])
+	observadorProcessa(u)
 	nivel_tanque1_estimado = XE[(0, 0)]
 	nivel_tanque2_estimado = XE[(1, 0)]
 	XEanterior = XE
 
-def observadorProcessa(Y,u):
-	global YE, XE, XEanterior, L, planta
-	YE = planta.getC()*(XEanterior)
-	XE = ((planta.getG()*(XEanterior))+(L*(Y-(YE))))+(planta.getH()*(u))
+def observadorProcessa(u):
+    global YE, XE, XEanterior, L, planta,Y
+    YE = planta.getC()*(XEanterior)
+    XE = ((planta.getG()*(XEanterior))+(L*(Y-YE)))+(planta.getH()*(u))
 
-def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_tanque2, set_point, set_point_ME):
-    global contador, lista_saida, tensao, lista_altura_tanque1, lista_altura_tanque2, lista_setpoint, lista_setpoint_ME
+def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_tanque2, set_point, nivel_estimado_T1, nivel_estimado_T2):
+    global contador, lista_saida, tensao, lista_altura_tanque1, lista_altura_tanque2, lista_setpoint, lista_nivel_estimado_T1, lista_nivel_estimado_T2
     if (contador >= 10):
         lista_saida.append((tempo, tensao_saida))
         lista_tensao.append((tempo, tensao_sensor))
         lista_altura_tanque1.append((tempo, altura_tanque1))
         lista_altura_tanque2.append((tempo, altura_tanque2))
         lista_setpoint.append((tempo, set_point))
-        lista_setpoint_ME.append((tempo, set_point_ME))
+        lista_nivel_estimado_T1.append((tempo, nivel_estimado_T1))
+        lista_nivel_estimado_T2.append((tempo, nivel_estimado_T2))
         contador = 0
     else:
         contador = contador + 1
@@ -648,7 +655,7 @@ class Controle(threading.Thread):
         while (Start):
             t = float(time.time() - t_init)
             if (flag_malha == 0):
-                 set_point=calculoFuncao(flag_sinal,valor_entrada,periodo,offset,t)
+                 set_point=calculoFuncao(flag_signal,valor_entrada,periodo,offset,t)
                  altura = float(getAltura(channel))
                  tensao = writeTensao(0, set_point)
                  v = float(quanser.getTension())
@@ -657,7 +664,7 @@ class Controle(threading.Thread):
                  x_axis_range = float(t)  # atualiza o range do grafico
                  atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
             if (flag_malha == 1):
-                set_point=calculoFuncao(flag_sinal,valor_entrada,periodo,offset,t)
+                set_point=calculoFuncao(flag_signal,valor_entrada,periodo,offset,t)
                 if(tipo_controle==0):
                     altura = float(getAltura(channel))
                     saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
@@ -691,7 +698,7 @@ class Controle(threading.Thread):
             nivel_tanque1 = altura_tanque1  # atualiza o nivel do tanque
             nivel_tanque2 = altura_tanque2  # atualiza o nivel do tanque
             x_axis_range = float(t)  # atualiza o range do grafico
-            atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
+            atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, nivel_tanque1_estimado, nivel_tanque2_estimado) #atualiza os valores plotados
             atualizaTempos(t)
             print nivel_tanque1_estimado
             print nivel_tanque2_estimado
@@ -717,7 +724,8 @@ class Interface(BoxLayout):
         self.plotsaida = MeshLinePlot(color=[1, 0, 0, 1])
         self.plottensao = MeshLinePlot(color=[1, 0, 1, 1])
         self.plotsetpoint = MeshLinePlot(color=[0, 1, 1, 1])
-        self.plotsetpointME = MeshLinePlot(color=[0, 0, 1, 1])
+        self.plotnivel_estimado1 = MeshLinePlot(color=[0, 0.5, 0, 1])
+        self.plotnivel_estimado2 = MeshLinePlot(color=[0.5, 0.5, 0, 1])
         self.plotaltura1 = MeshLinePlot(color=[0, 1, 0, 1])
         self.plotaltura2 = MeshLinePlot(color=[1, 1, 0, 1])
 
@@ -887,7 +895,7 @@ class Interface(BoxLayout):
 
     ##ATUALIZAR VALORES
     def atualiza(self):
-        global tensao_min, tensao_max, offset, valor_entrada, periodo
+        global tensao_min, tensao_max, offset, valor_entrada, periodo, p1, p2
         global Kp, Ki, Kd, taui, taud
         global T1_Kp, T1_Ki, T1_Kd, T1_taui, T1_taud, T2_Kp, T2_Ki, T2_Kd, T2_taui, T2_taud
         global flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint, antigo_setPoint, flag_verifica_overshoot
@@ -930,6 +938,8 @@ class Interface(BoxLayout):
             T2_tempo_subida = 0.0
             T2_tempo_acomodacao = 0.0
             T2_overshootPercentual = 0.0
+            p1 = Complex.Complex(float(self.ids.polo1_real.text), float(self.ids.polo1_img.text))
+            p2 = Complex.Complex(float(self.ids.polo2_real.text), float(self.ids.polo2_img.text))
         tensao_min = float(self.ids.tensaomin.text)
         tensao_max = float(self.ids.tensaomax.text)
         offset = float(self.ids.offset.text)
@@ -1229,8 +1239,9 @@ class Interface(BoxLayout):
         control.start()
         self.ids.graphsaida.add_plot(self.plotsaida)
         self.ids.graphsaida.add_plot(self.plottensao)
-        self.ids.graphsaida.add_plot(self.plotsetpointME)
-        self.ids.graphentrada.add_plot(self.plotsetpointME)
+        #self.ids.graphsaida.add_plot(self.plotsetpointME)
+        self.ids.graphentrada.add_plot(self.plotnivel_estimado1)
+        self.ids.graphentrada.add_plot(self.plotnivel_estimado2)
         self.ids.graphentrada.add_plot(self.plotsetpoint)
         self.ids.graphentrada.add_plot(self.plotaltura1)
         self.ids.graphentrada.add_plot(self.plotaltura2)
@@ -1293,18 +1304,19 @@ class Interface(BoxLayout):
     def get_valuesaida(self, dt):
         self.plotsaida.points = [i for i in lista_saida]
         self.plottensao.points = [i for i in lista_tensao]
-        self.plotsetpointME.points = [i for i in lista_setpoint_ME]
+        #self.plotsetpointME.points = [i for i in lista_nivel_estimado_T1]
 
     def get_valueentrada(self, dt):
         self.plotsetpoint.points = [i for i in lista_setpoint]
-        self.plotsetpointME.points = [i for i in lista_setpoint_ME]
+        self.plotnivel_estimado1.points = [i for i in lista_nivel_estimado_T1]
+        self.plotnivel_estimado2.points = [i for i in lista_nivel_estimado_T2]
         self.plotaltura1.points = [i for i in lista_altura_tanque1]
         self.plotaltura2.points = [i for i in lista_altura_tanque2]
 
 
 
     def stop(self):
-        global Start, tensao, lista_saida, lista_setpoint, lista_altura_tanque1, lista_tensao, lista_setpoint_ME, lista_altura_tanque2
+        global Start, tensao, lista_saida, lista_setpoint, lista_altura_tanque1, lista_tensao, lista_nivel_estimado_T1, lista_altura_tanque2
         global overshoot, overshootPercentual, antigo_setPoint
         global tempo_subida, tempo_acomodacao, tempo_acomodacao_inicial, tempo_final, tempo_inicial
         global T1_overshoot, T1_overshootPercentual, T1_antigo_setPoint
@@ -1330,13 +1342,13 @@ class Interface(BoxLayout):
         while len(lista_tensao) > 0: lista_tensao.pop()
         while len(lista_saida) > 0: lista_saida.pop()
         while len(lista_setpoint) > 0: lista_setpoint.pop()
-        while len(lista_setpoint_ME) > 0: lista_setpoint_ME.pop()
+        while len(lista_nivel_estimado_T1) > 0: lista_nivel_estimado_T1.pop()
         while len(lista_altura_tanque1) > 0: lista_altura_tanque1.pop()
         while len(lista_altura_tanque2) > 0: lista_altura_tanque2.pop()
         lista_tensao = [(0, 0)]
         lista_saida = [(0, 0)]
         lista_setpoint = [(0, 0)]
-        lista_setpoint_ME = [(0, 0)]
+        lista_nivel_estimado_T1 = [(0, 0)]
         lista_altura_tanque1 = [(0, 0)]
         lista_altura_tanque2 = [(0, 0)]
         overshootPercentual = 0.0

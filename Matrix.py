@@ -240,7 +240,7 @@ class Matrix:
 	def __neg__(self):
 		"""Negate the current matrix
 		"""
-		return self.inverse_element*self.m
+		return self.inverse_element*self
 
 	def __sub__(self, other):
 		"""Subtract matrix self-other
@@ -258,7 +258,7 @@ class Matrix:
 			raise TypeError("Cannot multiply matrix and type %s" % type(other))
 		if other.is_row_vector():
 			raise Matrix_Multiplication_Error(self, other)
-		return self.m*other.m
+		return self.m*other
 
 	def __rmul__(self, other):
 		"""Multiply other*self
