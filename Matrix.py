@@ -1,6 +1,9 @@
 import math
 import types
 import operator
+from numpy.linalg import inv
+from numpy.linalg import eigvals
+import numpy as np
 
 class Matrix_Error(Exception):
 	"""Abstract parent for all matrix exceptions
@@ -140,7 +143,7 @@ class Matrix:
 				self.create_null_matrix(args[0], args[0])
 			else:
 				# Create a matrix from initial values.
-				self.m = args[0]
+				self.m = np.array(args[0])
 				if __debug__:
 					# Verify correct format for m.
 					if not isinstance(args[0], types.ListType):
@@ -171,11 +174,7 @@ class Matrix:
 		# Note, you cannot simply write
 		#	self.m = [[self.null_element]*col]*row
 		# because this will make all the rows references of a single instance.
-		self.m = []
-		for i in xrange(row):
-			self.m.append([])
-			for j in xrange(col):
-				self.m[i].append(self.null_element)
+		self.m = np.zeros((row,col))
 
 	def __str__(self):
 		s = ""
@@ -236,22 +235,17 @@ class Matrix:
 			raise TypeError("Cannot add a matrix to type %s" % type(other))
 		if not (self.cols() == other.cols() and self.rows() == other.rows()):
 			raise Matrix_Addition_Error(self, other)
-		r = []
-		for row in xrange(self.rows()):
-			r.append([])
-			for col in xrange(self.cols()):
-				r[row].append(self[(row, col)] + other[(row, col)])
-		return Matrix(r)
+		return self.m+other.m
 
 	def __neg__(self):
 		"""Negate the current matrix
 		"""
-		return self.inverse_element*self
+		return self.inverse_element*self.m
 
 	def __sub__(self, other):
 		"""Subtract matrix self-other
 		"""
-		return self + -other
+		return self.m-other.m
 
 	def __mul__(self, other):
 		"""Multiply matrix self*other
@@ -264,7 +258,7 @@ class Matrix:
 			raise TypeError("Cannot multiply matrix and type %s" % type(other))
 		if other.is_row_vector():
 			raise Matrix_Multiplication_Error(self, other)
-		return self.matrix_multiply(other)
+		return self.m*other.m
 
 	def __rmul__(self, other):
 		"""Multiply other*self
@@ -286,28 +280,6 @@ class Matrix:
 			r.append(map(lambda x: x*scalar, row))
 		return Matrix(r)
 
-	def matrix_multiply(self, other):
-		"""Multiply the matrix by another matrix.
-
-		This is a private function called by __mul__.
-		"""
-		# Take the product of two matricies.
-		r = []
-		assert(isinstance(other, Matrix))
-		if not self.cols() == other.rows():
-			raise Matrix_Multiplication_Error(self, other)
-		for row in xrange(self.rows()):
-			r.append([])
-			for col in xrange(other.cols()):
-				r[row].append( \
-					self.vector_inner_product(self.row(row), other.col(col)))
-		if len(r) == 1 and len(r[0]) == 1:
-			# The result is a scalar.
-			return r[0][0]
-		else:
-			# The result is a matrix.
-			return Matrix(r)
-
 	def is_row_vector(self):
 		"""Is the matrix a row vector?
 		"""
@@ -326,20 +298,8 @@ class Matrix:
 	def transpose(self):
 		"""The transpose of the matrix
 		"""
-		r = []
-		for col in xrange(self.cols()):
-			r.append(self.col(col))
-		return Matrix(r)
-
-	def trace(self):
-		"""The trace of the matrix
-		"""
-		if not self.is_square():
-			raise Trace_Error()
-		t = 0
-		for i in xrange(self.rows()):
-			t += self[(i,i)]
-		return t
+		r = np.transpose(self.m)
+		return r
 
 	def determinant(self):
 		"""The determinant of the matrix
@@ -348,7 +308,7 @@ class Matrix:
 			raise Determinant_Error()
 		# Calculate 2x2 determinants directly.
 		if self.rows() == 2:
-			return self[(0, 0)]*self[(1, 1)] - self[(0, 1)]*self[(1, 0)]
+			return self.m[(0, 0)]*self.m[(1, 1)] - self.m[(0, 1)]*self.m[(1, 0)]
 		# Expand by minors for larger matricies.
 		return self.expand_by_minors_on_row(0)
 
@@ -428,6 +388,14 @@ class Matrix:
 		return isinstance(x, types.IntType) or \
 				isinstance(x, types.FloatType) or \
 				isinstance(x, types.ComplexType)
+	def inverse(self):
+		"""The inverse of the matrix
+		"""
+		return inv(self.m)
+	def autovalores(self):
+		"""The eigenvalues of the matrix
+		"""
+		return eigvals(self.m)
 
 
 def unit_matrix(n):
@@ -440,9 +408,7 @@ def unit_matrix(n):
 		0 1 0
 		0 0 1
 	"""
-	m = Matrix(n)
-	for i in xrange(m.rows()):
-		m[(i,i)] = m.identity_element
+	m = np.eye(n)
 	return m
 
 def row_vector(v):

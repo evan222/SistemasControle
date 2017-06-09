@@ -32,6 +32,9 @@ import threading
 import sys
 import Signal
 import time
+import Matrix
+import Complex
+import Planta
 
 ##VARIAVEIS GLOBAIS:
 
@@ -173,6 +176,16 @@ T2_flag_overshoot_subida = True
 T2_flag_mudou_setPoint =  False
 T2_flag_acomodacao = True
 T2_flag_verifica_overshoot = True
+
+XEanterior = Matrix.Matrix(2,2)
+YEanterior = Matrix.Matrix(1,2)
+L = Matrix.Matrix(2,1)
+nivel_tanque1_estimado = 0.0
+nivel_tanque2_estimado = 0.0
+p1 = Complex.Complex(0,0)
+p2 = Complex.Complex(0,0)
+
+planta = Planta.Planta()
 
 ##-------------------------------------------
 def readSensor(channel):
@@ -553,10 +566,33 @@ def atualizaTempos(t):
         flag = False
 
 def setTipoControle(tipo):
-	global tipo_controle
-	if(tipo==0 or tipo==1):
+    global tipo_controle
+    if(tipo==0 or tipo==1):
 		tipo_controle = tipo
 
+def formulaAckermman(p1, p2):
+	global L, planta
+	b=p1.getReal()+p2.getReal()
+	if(p1.getIm()!=0 and p2.getIm()!=0 and p1.getIm()==p2.getIm()):
+		c=p1.getReal()*p2.getReal()+p1.getIm()*p2.getIm()
+	else:
+		c=p1.getReal()*p2.getReal()
+	q = A*A + b*A + c*Matrix.unit_matrix(2)
+	L = q*planta.getVin().Matrix.Matrix([[0],[1]])
+
+def observadorCalculo(nivel_tanque1, nivel_tanque2, saida):
+	global XE, XEanterior, nivel_tanque1_estimado, nivel_tanque2_estimado
+	u = saida
+	Y = Matrix.Matrix([0, nivel_tanque2])
+	observadorProcessa(Y,u)
+	nivel_tanque1_estimado = XE[(0, 0)]
+	nivel_tanque2_estimado = XE[(1, 0)]
+	XEanterior = XE
+
+def observadorProcessa(Y,u):
+	global YE, XE, XEanterior, L, planta
+	YE = planta.getC()*(XEanterior)
+	XE = ((planta.getG()*(XEanterior))+(L*(Y-(YE))))+(planta.getH()*(u))
 
 def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_tanque2, set_point, set_point_ME):
     global contador, lista_saida, tensao, lista_altura_tanque1, lista_altura_tanque2, lista_setpoint, lista_setpoint_ME
@@ -571,6 +607,18 @@ def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_ta
     else:
         contador = contador + 1
 
+def calculoFuncao(flag_signal,valor_entrada,periodo,offset,t):
+    if (flag_signal == 1):
+        set_point = Signal.waveStep(valor_entrada, offset)
+    elif(flag_signal==2):
+        set_point = Signal.waveSine(valor_entrada, periodo, offset, t)
+    elif(flag_signal == 3):
+        set_point = Signal.waveSquare(valor_entrada, periodo, offset, t)
+    elif (flag_signal == 4):
+        set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
+    elif (flag_signal == 5):
+        set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
+    return set_point
 
 ##CONTROLE:
 
@@ -583,6 +631,7 @@ class Controle(threading.Thread):
         global x_axis_range, Start, nivel_tanque1, nivel_tanque2, channel, overshoot, overshootPercentual
         global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid
         global Kp, Ki, Kd, taud, taui, PID, setpoint_ME
+        global nivel_tanque1_estimado, nivel_tanque2_estimado, planta
 
         tensao = 0.0
         read = 0.0
@@ -598,35 +647,17 @@ class Controle(threading.Thread):
         altura_tanque2 = float(getAltura(1))
         while (Start):
             t = float(time.time() - t_init)
-            # if (flag_malha == 0):
-            #     if (flag_signal == 1):
-            #         set_point = Signal.waveStep(valor_entrada, offset)
-            #     elif (flag_signal == 2):
-            #         set_point = Signal.waveSine(valor_entrada, periodo, offset, t)
-            #     elif (flag_signal == 3):
-            #         set_point = Signal.waveSquare(valor_entrada, periodo, offset, t)
-            #     elif (flag_signal == 4):
-            #         set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
-            #     elif (flag_signal == 5):
-            #         set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
-            #     altura = float(getAltura(channel))
-            #     tensao = writeTensao(0, set_point)
-            #     v = float(quanser.getTension())
-            #     read = float(readSensor(channel))
-            #     nivel_tanque = altura  # atualiza o nivel do tanque
-            #     x_axis_range = float(t)  # atualiza o range do grafico
-            #     atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
+            if (flag_malha == 0):
+                 set_point=calculoFuncao(flag_sinal,valor_entrada,periodo,offset,t)
+                 altura = float(getAltura(channel))
+                 tensao = writeTensao(0, set_point)
+                 v = float(quanser.getTension())
+                 read = float(readSensor(channel))
+                 nivel_tanque = altura  # atualiza o nivel do tanque
+                 x_axis_range = float(t)  # atualiza o range do grafico
+                 atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
             if (flag_malha == 1):
-                if (flag_signal == 1):
-                    set_point = Signal.waveStep(valor_entrada, offset)
-                elif (flag_signal == 2):
-                    set_point = Signal.waveSine(valor_entrada, periodo, offset, t)
-                elif (flag_signal == 3):
-                    set_point = Signal.waveSquare(valor_entrada, periodo, offset, t)
-                elif (flag_signal == 4):
-                    set_point = Signal.waveSawtooth(valor_entrada, periodo, offset, t)
-                elif (flag_signal == 5):
-                    set_point = Signal.waveRandom(valor_entrada, periodo, offset, t)
+                set_point=calculoFuncao(flag_sinal,valor_entrada,periodo,offset,t)
                 if(tipo_controle==0):
                     altura = float(getAltura(channel))
                     saida = controlePID_K(set_point, altura, Kp, Kd, Ki)
@@ -644,16 +675,26 @@ class Controle(threading.Thread):
                     calculaOvershoot_Cascata(setpoint_ME, altura_tanque1, 1)
                     calculaTempoSubida_Cascata(setpoint_ME, altura_tanque1, t, 1)
                     calculaTempoAcomodacao_Cascata(setpoint_ME, altura_tanque1, t, 1)
-                print "Tensao: ", tensao
-                tensao = writeTensao(0, saida)
-                print "Write tensao saida: ", saida
-                v = float(quanser.getTension())
-                read = float(readSensor(channel))
-                nivel_tanque1 = altura_tanque1  # atualiza o nivel do tanque
-                nivel_tanque2 = altura_tanque2  # atualiza o nivel do tanque
-                x_axis_range = float(t)  # atualiza o range do grafico
-                atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
-                atualizaTempos(t)
+                if(flag_controle==2):
+                    altura_tanque1 = float(getAltura(0))
+                    altura_tanque2 = float(getAltura(1))
+                    saida = controlePID_K(set_point, altura_tanque2, Kp, Kd, Ki)
+                    calculaOvershoot(set_point, altura)
+                    calculaTempoSubida(set_point, altura, t)
+                    calculaTempoAcomodacao(set_point, altura, t)
+                    observadorCalculo(altura_tanque1, altura_tanque2, saida)
+            print "Tensao: ", tensao
+            tensao = writeTensao(0, saida)
+            print "Write tensao saida: ", saida
+            v = float(quanser.getTension())
+            read = float(readSensor(channel))
+            nivel_tanque1 = altura_tanque1  # atualiza o nivel do tanque
+            nivel_tanque2 = altura_tanque2  # atualiza o nivel do tanque
+            x_axis_range = float(t)  # atualiza o range do grafico
+            atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
+            atualizaTempos(t)
+            print nivel_tanque1_estimado
+            print nivel_tanque2_estimado
 
         endConnection(channel)
         sys.exit()
