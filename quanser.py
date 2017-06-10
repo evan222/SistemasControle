@@ -12,8 +12,8 @@ import socket
 # Variaveis globais para voltagem maxima e minima suportada pela bomba
 # O valor das variáveis voltMax e voltMin vao variar de acordo com o que o usuário colocar a interface
 # Deve ser tratado na interface que o usuario nao possa digitar/escolhar algo > 4 ou < -4
-voltMax = 3.0
-voltMin = -3.0
+voltMax = 2.0
+voltMin = -2.0
 tension = 0.0
 
 class Quanser:

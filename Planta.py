@@ -1,14 +1,19 @@
-import Matrix
+import math
+import types
+import operator
+from numpy.linalg import inv
+from numpy.linalg import eigvals
+import numpy as np
 
 class Planta:
 
 	def __init__(self):
-		self.A = Matrix.Matrix([[-0.003749,0],[-0.003749,0.003749]])
-		self.B = Matrix.Matrix([[0.2964],[0]])
-		self.C = Matrix.Matrix([[0,1]])
-		self.G = Matrix.Matrix([[0.99342173,0],[0.00655658,0.99342173]])
-		self.H = Matrix.Matrix([[0.029634444],[0.029645556]])
-		self.V = Matrix.Matrix([[1,1],[-0.003749,0]])
+		self.A = np.array([[-0.003749,0],[-0.003749,0.003749]])
+		self.B = np.array([[0.2964],[0]])
+		self.C = np.array([[0,1]])
+		self.G = np.array([[0.99342173,0],[0.00655658,0.99342173]])
+		self.H = np.array([[0.029634444],[0.029645556]])
+		self.V = np.array([[1,1],[-0.003749,0]])
 	def getA(self):
 		return self.A
 	def getB(self):
@@ -21,5 +26,5 @@ class Planta:
 		return self.H
 	def getV(self):
 		return self.V
-	def getVinv():
-		return self.V.inverse()
+	def getVinv(self):
+		return np.linalg.inv(self.V)

@@ -30,7 +30,7 @@ class Complex:
     if self.imaginary_part > 0:
       return '%s + %si' % (self.real_part, self.imaginary_part)
     return '%s - %si' % (self.real_part, abs(self.imaginary_part))
-  def getReal():
+  def getReal(self):
     return self.real_part
-  def getIm():
+  def getIm(self):
     return self.imaginary_part
