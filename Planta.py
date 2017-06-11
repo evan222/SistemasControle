@@ -8,12 +8,12 @@ import numpy as np
 class Planta:
 
 	def __init__(self):
-		self.A = np.array([[-0.003749,0],[-0.003749,0.003749]])
+		self.A = np.array([[-0.0655969,0],[0.0655969,-0.0655969]])
 		self.B = np.array([[0.2964],[0]])
-		self.C = np.array([[0,1]])
+		self.C = np.array([[1,1]])
 		self.G = np.array([[0.99342173,0],[0.00655658,0.99342173]])
-		self.H = np.array([[0.029634444],[0.029645556]])
-		self.V = np.array([[1,1],[-0.003749,0]])
+		self.H = np.array([[0.0286709],[0.0009718]])
+		self.V = np.array([[1,1],[0,-0.0655969]])
 	def getA(self):
 		return self.A
 	def getB(self):
