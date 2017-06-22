@@ -10,7 +10,7 @@ Interface:
 			orientation: "vertical"
 
 			BoxLayout:
-                size_hint: [1,.2]
+                size_hint: [1,.3]
                 orientation: "horizontal"
 
 		        GridLayout:
@@ -64,6 +64,14 @@ Interface:
                         background_down: 'ondadown.png'
                         text: "Observador"
                         on_press: root.Obs()
+                    ToggleButton:
+                        id: controle_seguidor
+                        group: 'controle'
+                        background_normal: 'ondaup.png'
+                        background_down: 'ondadown.png'
+                        text: "Seguidor de Ref."
+                        on_press: root.Seguidor()
+
 
                 #ONDA
                 BoxLayout:
@@ -863,6 +871,143 @@ Interface:
                                         text: "i"
                                     TextInput:
                                         id: polo2_img
+                                        multiline: False
+                                        disabled: False
+                                        text: '0'
+
+					TabbedPanelItem:
+                        text: "Seguidor Ref."
+
+        ##--------------------------SEGUIDOR DE REFERENCIA---------------------------------------
+
+                        BoxLayout:
+                            size_hint: [1,1]
+                            orientation: "vertical"
+
+                            #PID
+                            BoxLayout:
+                                size_hint: [1,0.8]
+                                orientation: "horizontal"
+                                Label:
+                                    id: cp
+                                    text: "Controle Proporcional"
+
+
+                            #INPUTS
+                            BoxLayout:
+                                size_hint: [1,2]
+                                orientation: "horizontal"
+                                GridLayout:
+                                    rows: 5
+                                    cols: 1
+                                    Label:
+                                        id: overshoot_label
+                                        text: "Overshoot (%): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: tempo_subida_label
+                                        text: "Tempo de Subida (s): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: tempo_acomodacao_label
+                                        text: "Tempo de Acomodação (s): "
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: polo1_seguidor_label
+                                        text: "Polo 1"
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+                                    Label:
+                                        id: polo2_seguidor_label
+                                        text: "Polo 2"
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+
+                                GridLayout:
+                                    rows: 5
+                                    cols: 3
+
+                                    TextInput:
+                                        id: overshoot
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    Label:
+                                        id: kpL
+                                        text: "KP"
+                                    TextInput:
+                                        id: kp
+                                        multiline: False
+                                        text: '0'
+
+                                    TextInput:
+                                        id: tempo_subida
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    Label:
+                                        id: ganho1_seguidor_label
+                                        text: "Ganho 1"
+                                    TextInput:
+                                        id: ganho1_seguidor
+                                        multiline: False
+                                        disabled: True
+                                        text: '0'
+
+                                    TextInput:
+                                        id: tempo_acomodacao
+                                        multiline: False
+                                        disabled: False
+                                        readonly: True
+                                        #input_filter: 'float'
+                                        text_size: self.size
+                                        text: '-'
+                                    Label:
+                                        id: ganho2_seguidor_label
+                                        text: "Ganho 2"
+                                    TextInput:
+                                        id: ganho2_seguidor
+                                        multiline: False
+                                        disabled: True
+                                        text: '0'
+
+                                    TextInput:
+                                        id: polo1_seguidor_real
+                                        multiline: False
+                                        text: '0'
+                                    Label:
+                                        id: polo1_seguidor_label
+                                        text: "i"
+                                    TextInput:
+                                        id: polo1_seguidor_img
+                                        multiline: False
+                                        disabled: False
+                                        #readonly: True
+                                        text: '0'
+
+                                    TextInput:
+                                        id: polo2_seguidor_real
+                                        multiline: False
+                                        text: '0'
+                                    Label:
+                                        id: polo2_seguidor_label
+                                        text: "i"
+                                    TextInput:
+                                        id: polo2_seguidor_img
                                         multiline: False
                                         disabled: False
                                         text: '0'
