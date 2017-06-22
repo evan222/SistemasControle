@@ -653,7 +653,7 @@ Interface:
                                         id: kpL
                                         text: "KP"
                                     TextInput:
-                                        id: kp
+                                        id: kp_CD
                                         multiline: False
                                         text: '0'
 
@@ -810,7 +810,7 @@ Interface:
                                         id: kpL
                                         text: "KP"
                                     TextInput:
-                                        id: kp
+                                        id: kp_obs
                                         multiline: False
                                         text: '0'
 
@@ -898,7 +898,7 @@ Interface:
                                 size_hint: [1,2]
                                 orientation: "horizontal"
                                 GridLayout:
-                                    rows: 5
+                                    rows: 6
                                     cols: 1
                                     Label:
                                         id: overshoot_label
@@ -930,9 +930,16 @@ Interface:
                                         text_size: self.size
                                         valign: 'middle'
                                         halign: 'center'
+                                    Label:
+                                        id: polo3_seguidor_label
+                                        text: "Polo 3"
+                                        text_size: self.size
+                                        valign: 'middle'
+                                        halign: 'center'
+
 
                                 GridLayout:
-                                    rows: 5
+                                    rows: 6
                                     cols: 3
 
                                     TextInput:
@@ -947,7 +954,7 @@ Interface:
                                         id: kpL
                                         text: "KP"
                                     TextInput:
-                                        id: kp
+                                        id: kp_seg
                                         multiline: False
                                         text: '0'
 
@@ -1011,6 +1018,20 @@ Interface:
                                         multiline: False
                                         disabled: False
                                         text: '0'
+
+                                    TextInput:
+                                        id: polo3_seguidor_real
+                                        multiline: False
+                                        text: '0'
+                                    Label:
+                                        id: polo3_seguidor_label
+                                        text: "i"
+                                    TextInput:
+                                        id: polo3_seguidor_img
+                                        multiline: False
+                                        disabled: False
+                                        text: '0'
+
 
 
 
