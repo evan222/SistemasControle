@@ -214,7 +214,7 @@ def readSensor(channel):
 def getAltura(channel):
 	global conn
 	tensao = readSensor(channel)
-	return float(tensao * 4.6)
+	return float(tensao*6.25)
 
 
 def startConnection(IP, porta):
@@ -637,13 +637,6 @@ def formulaAckermmanSeg(ps1,ps2,ps3):
 	q = planta.getGA()*planta.getGA()*planta.getGA()+b*planta.getGA()*planta.getGA()+c*planta.getGA()+d*I
 	K = N.dot(planta.getWinv()*q)
 	Kc = (K+N).dot(planta.getPinv())
-	print("N: ", N)
-	print("N*Winv: ", N.dot(planta.getWinv()))
-	#print("N: ", N)
-	print("K: ", K)
-	print("Winv: ", planta.getWinv())
-	print("Q: ", q)
-	print("P: ", planta.getPinv())
 
 def seguidorCalculo(nivel_tanque1, nivel_tanque2, setPoint):
 	global ps1,ps2,ps3,Kc,v,u
@@ -651,8 +644,6 @@ def seguidorCalculo(nivel_tanque1, nivel_tanque2, setPoint):
 	erro = setPoint-nivel_tanque2
 	v = v+erro
 	formulaAckermmanSeg(ps1,ps2,ps3)
-	print Kc
-	print x
 	u = -Kc[0][0]*x[0][0]-Kc[0][1]*x[1][0]+Kc[0][2]*v
 	return u
 
@@ -1416,7 +1407,7 @@ class Interface(BoxLayout):
 		self.ids.graphsaida.remove_plot(self.plotsaida)
 		self.ids.graphsaida.remove_plot(self.plottensao)
 		#self.ids.graphsaida.remove_plot(self.plotsetpointME)
-		self.ids.graphentrada.remove_plot(self.plotsetpointME)
+		#self.ids.graphentrada.remove_plot(self.plotsetpointME)
 		self.ids.graphentrada.remove_plot(self.plotsetpoint)
 		self.ids.graphentrada.remove_plot(self.plotaltura1)
 		self.ids.graphentrada.remove_plot(self.plotaltura2)
@@ -1440,6 +1431,7 @@ class Interface(BoxLayout):
 		##Verificar os campos para T1 e T2 em cascata e colocar a mesma alteracao
 		self.ids.overshoot.text = "-"
 		self.ids.nivel_tanque1.value = 0.0
+		self.ids.nivel_tanque2.value = 0.0
 		self.ids.tempo_subida.text = "-"
 		self.ids.tempo_acomodacao.text = "-"
 		tempo_subida = 0.0
