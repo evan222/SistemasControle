@@ -76,8 +76,8 @@ tipo_controle = 1
 valor_entrada = 0
 periodo = 1
 offset = 0
-tensao_max = 2.0
-tensao_min = -2.0
+tensao_max = 2.5
+tensao_min = -2.5
 setpoint_ME = 0.0
 
 # Variaveis do controlador PID
@@ -192,14 +192,14 @@ p1 = Complex.Complex(0.0,0.0)
 p2 = Complex.Complex(0.0,0.0)
 YE = np.array([[0.0,0.0]])
 Y = np.array([[0.0,0.0]])
-N = np.array([0.0,0.0,1.0])
-K = np.array([0.0,0.0,0.0])
+N = np.array([[0.0,0.0,1.0]])
+K = np.array([[0.0,0.0,0.0]])
 ps1 = Complex.Complex(0.9048,0.0)
 ps2 = Complex.Complex(0.9920,0.0)
 ps3 = Complex.Complex(0.9980,0.0)
 M = np.array([[0.0,1.0]]).transpose()
 L = np.array([[0.0,0.0]]).transpose()
-Kc = np.array([0.0,0.0,0.0])
+Kc = np.array([[0.0,0.0,0.0]])
 v = 0.0
 u = 0.0
 
@@ -601,7 +601,7 @@ def formulaAckermmanObs(p1, p2):
 	I = np.array([[1.0,0.0],[0.0,1.0]])
 	q = planta.getA()*planta.getA() + b*planta.getA() + c*I
 	V = planta.getVinv()
-	L = (q*V)*M
+	L = (q*V).dot(M)
 
 def observadorCalculo(nivel_tanque1, nivel_tanque2, saida):
 	global YE, XE, XEanterior, nivel_tanque1_estimado, nivel_tanque2_estimado, Y, p1, p2
@@ -609,14 +609,14 @@ def observadorCalculo(nivel_tanque1, nivel_tanque2, saida):
 	Y = np.array([[0, nivel_tanque2]])
 	formulaAckermmanObs(p1,p2)
 	observadorProcessa(u)
-	nivel_tanque1_estimado = XE[(0.0, 0.0)]
-	nivel_tanque2_estimado = XE[(1.0, 0.0)]
+	nivel_tanque1_estimado = XE[0][0]
+	nivel_tanque2_estimado = XE[1][0]
 	XEanterior = XE
 
 def observadorProcessa(u):
 	global YE, XE, XEanterior, L, planta, Y
-	YE = planta.getC()*(XEanterior)
-	XE = ((planta.getG()*(XEanterior))+(L*(Y-YE)))+(planta.getH()*u)
+	YE = planta.getC().dot(XEanterior)
+	XE = (planta.getG().dot(XEanterior)+(L.dot(Y-YE)))+(planta.getH()*u)
 
 def formulaAckermmanSeg(ps1,ps2,ps3):
 	global K, N, planta, Kc
@@ -635,19 +635,28 @@ def formulaAckermmanSeg(ps1,ps2,ps3):
 		d = ps1.getReal()*ps2.getReal()*ps3.getReal()
 	I = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
 	q = planta.getGA()*planta.getGA()*planta.getGA()+b*planta.getGA()*planta.getGA()+c*planta.getGA()+d*I
-	K = N*planta.getWinv().q
-	Kc = (K+N)*planta.getPinv
+	K = N.dot(planta.getWinv()*q)
+	Kc = (K+N).dot(planta.getPinv())
+	print("N: ", N)
+	print("N*Winv: ", N.dot(planta.getWinv()))
+	#print("N: ", N)
+	print("K: ", K)
+	print("Winv: ", planta.getWinv())
+	print("Q: ", q)
+	print("P: ", planta.getPinv())
 
-def seguidorCalculo(nivel_tanque1, nivel_tanque2, saida, setPoint):
+def seguidorCalculo(nivel_tanque1, nivel_tanque2, setPoint):
 	global ps1,ps2,ps3,Kc,v,u
-	x = np.array([nivel_tanque1],[nivel_tanque2])
+	x = np.array([[nivel_tanque1],[nivel_tanque2]])
 	erro = setPoint-nivel_tanque2
 	v = v+erro
 	formulaAckermmanSeg(ps1,ps2,ps3)
-	u = -Kc[0][0]*x[0][0]-Kc[0][1]*x[0][1]+Kc[0][2]*v
+	print Kc
+	print x
+	u = -Kc[0][0]*x[0][0]-Kc[0][1]*x[1][0]+Kc[0][2]*v
 	return u
 
-def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_tanque2, set_point, nivel_estimado_T1, nivel_estimado_T2):
+def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_tanque2, set_point):
 	global contador, lista_saida, tensao, lista_altura_tanque1, lista_altura_tanque2, lista_setpoint, lista_nivel_estimado_T1, lista_nivel_estimado_T2
 	if (contador >= 10):
 		lista_saida.append((tempo, tensao_saida))
@@ -655,8 +664,8 @@ def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_ta
 		lista_altura_tanque1.append((tempo, altura_tanque1))
 		lista_altura_tanque2.append((tempo, altura_tanque2))
 		lista_setpoint.append((tempo, set_point))
-		lista_nivel_estimado_T1.append((tempo, nivel_estimado_T1))
-		lista_nivel_estimado_T2.append((tempo, nivel_estimado_T2))
+		#lista_nivel_estimado_T1.append((tempo, nivel_estimado_T1))
+		#lista_nivel_estimado_T2.append((tempo, nivel_estimado_T2))
 		contador = 0
 	else:
 		contador = contador + 1
@@ -709,7 +718,7 @@ class Controle(threading.Thread):
 				read = float(readSensor(channel))
 				nivel_tanque = altura  # atualiza o nivel do tanque
 				x_axis_range = float(t)  # atualiza o range do grafico
-				atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
+				atualizaListas(t, v, tensao, altura_tanque1, altura_tanque2, set_point) #atualiza os valores plotados
 			if (flag_malha == 1):
 				set_point=calculoFuncao(flag_signal,valor_entrada,periodo,offset,t)
 				if(tipo_controle==0):
@@ -752,7 +761,7 @@ class Controle(threading.Thread):
 			nivel_tanque1 = altura_tanque1  # atualiza o nivel do tanque
 			nivel_tanque2 = altura_tanque2  # atualiza o nivel do tanque
 			x_axis_range = float(t)  # atualiza o range do grafico
-			atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, nivel_tanque1_estimado, nivel_tanque2_estimado) #atualiza os valores plotados
+			atualizaListas(t, v, tensao, altura_tanque1, altura_tanque2, set_point) #atualiza os valores plotados
 			atualizaTempos(t)
 
 		endConnection(channel)
@@ -776,8 +785,8 @@ class Interface(BoxLayout):
 		self.plotsaida = MeshLinePlot(color=[1, 0, 0, 1])
 		self.plottensao = MeshLinePlot(color=[1, 0, 1, 1])
 		self.plotsetpoint = MeshLinePlot(color=[0, 1, 1, 1])
-		self.plotnivel_estimado1 = MeshLinePlot(color=[0, 0.5, 0, 1])
-		self.plotnivel_estimado2 = MeshLinePlot(color=[0.5, 0.5, 0, 1])
+		#self.plotnivel_estimado1 = MeshLinePlot(color=[0, 0.5, 0, 1])
+		#self.plotnivel_estimado2 = MeshLinePlot(color=[0.5, 0.5, 0, 1])
 		self.plotaltura1 = MeshLinePlot(color=[0, 1, 0, 1])
 		self.plotaltura2 = MeshLinePlot(color=[1, 1, 0, 1])
 
@@ -1306,8 +1315,8 @@ class Interface(BoxLayout):
 		self.ids.graphsaida.add_plot(self.plotsaida)
 		self.ids.graphsaida.add_plot(self.plottensao)
 		#self.ids.graphsaida.add_plot(self.plotsetpointME)
-		self.ids.graphentrada.add_plot(self.plotnivel_estimado1)
-		self.ids.graphentrada.add_plot(self.plotnivel_estimado2)
+		#self.ids.graphentrada.add_plot(self.plotnivel_estimado1)
+		#self.ids.graphentrada.add_plot(self.plotnivel_estimado2)
 		self.ids.graphentrada.add_plot(self.plotsetpoint)
 		self.ids.graphentrada.add_plot(self.plotaltura1)
 		self.ids.graphentrada.add_plot(self.plotaltura2)
@@ -1341,11 +1350,12 @@ class Interface(BoxLayout):
 		self.ids.T2_tempo_subida.text = str(round(T2_tempo_subida, 3))
 		self.ids.T2_tempo_acomodacao.text = str(round(T2_tempo_acomodacao, 3))
 
-		self.ids.ganho1.text = L[0][0]
-		self.ids.ganho2.text = L[1][0]
-		self.ids.ganho1_seguidor.text = Kc[0][0]
-		self.ids.ganho2_seguidor.text = Kc[0][1]
-		self.ids.ganho3_seguidor.text = Kc[0][2]
+		#print(L)
+		#self.ids.ganho1.text = L[0][0]
+		#self.ids.ganho2.text = L[1][0]
+		#self.ids.ganho1_seguidor.text = Kc[0][0]
+		#self.ids.ganho2_seguidor.text = Kc[0][1]
+		#self.ids.ganho3_seguidor.text = Kc[0][2]
 
 
 	def update_nivel(self, *args):
@@ -1381,8 +1391,8 @@ class Interface(BoxLayout):
 
 	def get_valueentrada(self, dt):
 		self.plotsetpoint.points = [i for i in lista_setpoint]
-		self.plotnivel_estimado1.points = [i for i in lista_nivel_estimado_T1]
-		self.plotnivel_estimado2.points = [i for i in lista_nivel_estimado_T2]
+		#self.plotnivel_estimado1.points = [i for i in lista_nivel_estimado_T1]
+		#self.plotnivel_estimado2.points = [i for i in lista_nivel_estimado_T2]
 		self.plotaltura1.points = [i for i in lista_altura_tanque1]
 		self.plotaltura2.points = [i for i in lista_altura_tanque2]
 
@@ -1405,7 +1415,7 @@ class Interface(BoxLayout):
 
 		self.ids.graphsaida.remove_plot(self.plotsaida)
 		self.ids.graphsaida.remove_plot(self.plottensao)
-		self.ids.graphsaida.remove_plot(self.plotsetpointME)
+		#self.ids.graphsaida.remove_plot(self.plotsetpointME)
 		self.ids.graphentrada.remove_plot(self.plotsetpointME)
 		self.ids.graphentrada.remove_plot(self.plotsetpoint)
 		self.ids.graphentrada.remove_plot(self.plotaltura1)
@@ -1415,13 +1425,13 @@ class Interface(BoxLayout):
 		while len(lista_tensao) > 0: lista_tensao.pop()
 		while len(lista_saida) > 0: lista_saida.pop()
 		while len(lista_setpoint) > 0: lista_setpoint.pop()
-		while len(lista_nivel_estimado_T1) > 0: lista_nivel_estimado_T1.pop()
+		#while len(lista_nivel_estimado_T1) > 0: lista_nivel_estimado_T1.pop()
 		while len(lista_altura_tanque1) > 0: lista_altura_tanque1.pop()
 		while len(lista_altura_tanque2) > 0: lista_altura_tanque2.pop()
 		lista_tensao = [(0, 0)]
 		lista_saida = [(0, 0)]
 		lista_setpoint = [(0, 0)]
-		lista_nivel_estimado_T1 = [(0, 0)]
+		#lista_nivel_estimado_T1 = [(0, 0)]
 		lista_altura_tanque1 = [(0, 0)]
 		lista_altura_tanque2 = [(0, 0)]
 		overshootPercentual = 0.0
