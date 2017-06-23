@@ -183,16 +183,25 @@ T2_flag_mudou_setPoint =  False
 T2_flag_acomodacao = True
 T2_flag_verifica_overshoot = True
 
-XEanterior = np.array([[0,0],[0,0]])
-YEanterior = np.array([[0,0]])
-L = np.array([[0,0]]).transpose()
-M = np.array([[0,1]]).transpose()
+## Variaveis do observador
+XEanterior = np.array([[0.0,0.0],[0.0,0.0]])
+YEanterior = np.array([[0.0,0.0]])
 nivel_tanque1_estimado = 0.0
 nivel_tanque2_estimado = 0.0
-p1 = Complex.Complex(0,0)
-p2 = Complex.Complex(0,0)
-YE = np.array([[0,0]])
-Y = np.array([[0,0]])
+p1 = Complex.Complex(0.0,0.0)
+p2 = Complex.Complex(0.0,0.0)
+YE = np.array([[0.0,0.0]])
+Y = np.array([[0.0,0.0]])
+N = np.array([0.0,0.0,1.0])
+K = np.array([0.0,0.0,0.0])
+ps1 = Complex.Complex(0.9048,0.0)
+ps2 = Complex.Complex(0.9920,0.0)
+ps3 = Complex.Complex(0.9980,0.0)
+M = np.array([[0.0,1.0]]).transpose()
+L = np.array([[0.0,0.0]]).transpose()
+Kc = np.array([0.0,0.0,0.0])
+v = 0.0
+u = 0.0
 
 planta = Planta.Planta()
 
@@ -579,17 +588,17 @@ def atualizaTempos(t):
 
 def setTipoControle(tipo):
 	global tipo_controle
-	if(tipo==0 or tipo==1):
+	if(tipo==0 or tipo==1 or tipo==2 or tipo==3):
 		tipo_controle = tipo
 
-def formulaAckermman(p1, p2):
+def formulaAckermmanObs(p1, p2):
 	global L, planta, M
 	b=p1.getReal()+p2.getReal()
-	if(p1.getIm()!=0 and p2.getIm()!=0 and p1.getIm()==p2.getIm()):
+	if(p1.getIm()!=0 and p1.getIm()==p2.getIm() and p1.getReal()==p1.getReal()):
 		c=p1.getReal()*p2.getReal()+p1.getIm()*p2.getIm()
 	else:
 		c=p1.getReal()*p2.getReal()
-	I = np.array([[1,0],[0,1]])
+	I = np.array([[1.0,0.0],[0.0,1.0]])
 	q = planta.getA()*planta.getA() + b*planta.getA() + c*I
 	V = planta.getVinv()
 	L = (q*V)*M
@@ -598,16 +607,45 @@ def observadorCalculo(nivel_tanque1, nivel_tanque2, saida):
 	global YE, XE, XEanterior, nivel_tanque1_estimado, nivel_tanque2_estimado, Y, p1, p2
 	u = saida
 	Y = np.array([[0, nivel_tanque2]])
-	formulaAckermman(p1,p2)
+	formulaAckermmanObs(p1,p2)
 	observadorProcessa(u)
-	nivel_tanque1_estimado = XE[(0, 0)]
-	nivel_tanque2_estimado = XE[(1, 0)]
+	nivel_tanque1_estimado = XE[(0.0, 0.0)]
+	nivel_tanque2_estimado = XE[(1.0, 0.0)]
 	XEanterior = XE
 
 def observadorProcessa(u):
 	global YE, XE, XEanterior, L, planta, Y
 	YE = planta.getC()*(XEanterior)
 	XE = ((planta.getG()*(XEanterior))+(L*(Y-YE)))+(planta.getH()*u)
+
+def formulaAckermmanSeg(ps1,ps2,ps3):
+	global K, N, planta, Kc
+	b = ps1.getReal()+ps2.getReal()+ps3.getReal()
+	if(ps1.getIm()!=0 and ps1.getIm()==ps2.getIm() and ps1.getReal()==ps2.getReal()):
+		c = ps1.getReal()*ps1.getReal()+ps1.getIm()*ps1.getIm()+ps3.getReal()*2*ps1.getReal()
+		d = ps1.getReal()*ps1.getReal()*ps3.getReal()+ps1.getIm()*ps1.getIm()*ps3.getReal()
+	elif(ps1.getIm()!=0 and ps1.getIm()==ps3.getIm() and ps1.getReal()==ps3.getReal()):
+		c = ps1.getReal()*ps1.getReal()+ ps1.getIm()* ps1.getIm()+ps2.getReal()*2*ps1.getReal()
+		d = ps1.getReal()*ps1.getReal()*ps2.getReal()+ps1.getIm()*ps1.getIm()*ps2.getReal()
+	elif(ps2.getIm()!=0 and ps2.getIm()==ps3.getIm() and ps2.getReal()==ps3.getReal()):
+		c = ps2.getReal()*ps2.getReal()+ps2.getIm()*ps2.getIm()+ps1.getReal()*2*ps2.getReal()
+		d = ps2.getReal()*ps2.getReal()*ps1.getReal()+ps2.getIm()*ps2.getIm()*ps1.getReal()
+	else:
+		c = ps1.getReal()*(ps2.getReal()+ps3.getReal())+ps2.getReal()*ps3.getReal()
+		d = ps1.getReal()*ps2.getReal()*ps3.getReal()
+	I = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+	q = planta.getGA()*planta.getGA()*planta.getGA()+b*planta.getGA()*planta.getGA()+c*planta.getGA()+d*I
+	K = N*planta.getWinv().q
+	Kc = (K+N)*planta.getPinv
+
+def seguidorCalculo(nivel_tanque1, nivel_tanque2, saida, setPoint):
+	global ps1,ps2,ps3,Kc,v,u
+	x = np.array([nivel_tanque1],[nivel_tanque2])
+	erro = setPoint-nivel_tanque2
+	v = v+erro
+	formulaAckermmanSeg(ps1,ps2,ps3)
+	u = -Kc[0][0]*x[0][0]-Kc[0][1]*x[0][1]+Kc[0][2]*v
+	return u
 
 def atualizaListas(tempo, tensao_saida, tensao_sensor, altura_tanque1, altura_tanque2, set_point, nivel_estimado_T1, nivel_estimado_T2):
 	global contador, lista_saida, tensao, lista_altura_tanque1, lista_altura_tanque2, lista_setpoint, lista_nivel_estimado_T1, lista_nivel_estimado_T2
@@ -647,7 +685,7 @@ class Controle(threading.Thread):
 		global x_axis_range, Start, nivel_tanque1, nivel_tanque2, channel, overshoot, overshootPercentual
 		global flag_malha, flag_signal, periodo, offset, conn, valor_entrada, flag_pid
 		global Kp, Ki, Kd, taud, taui, PID, setpoint_ME
-		global nivel_tanque1_estimado, nivel_tanque2_estimado, planta
+		global nivel_tanque1_estimado, nivel_tanque2_estimado, planta, u
 
 		tensao = 0.0
 		read = 0.0
@@ -664,14 +702,14 @@ class Controle(threading.Thread):
 		while (Start):
 			t = float(time.time() - t_init)
 			if (flag_malha == 0):
-				 set_point=calculoFuncao(flag_signal,valor_entrada,periodo,offset,t)
-				 altura = float(getAltura(channel))
-				 tensao = writeTensao(0, set_point)
-				 v = float(quanser.getTension())
-				 read = float(readSensor(channel))
-				 nivel_tanque = altura  # atualiza o nivel do tanque
-				 x_axis_range = float(t)  # atualiza o range do grafico
-				 atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
+				set_point=calculoFuncao(flag_signal,valor_entrada,periodo,offset,t)
+				altura = float(getAltura(channel))
+				tensao = writeTensao(0, set_point)
+				v = float(quanser.getTension())
+				read = float(readSensor(channel))
+				nivel_tanque = altura  # atualiza o nivel do tanque
+				x_axis_range = float(t)  # atualiza o range do grafico
+				atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, setpoint_ME) #atualiza os valores plotados
 			if (flag_malha == 1):
 				set_point=calculoFuncao(flag_signal,valor_entrada,periodo,offset,t)
 				if(tipo_controle==0):
@@ -691,7 +729,7 @@ class Controle(threading.Thread):
 					calculaOvershoot_Cascata(setpoint_ME, altura_tanque1, 1)
 					calculaTempoSubida_Cascata(setpoint_ME, altura_tanque1, t, 1)
 					calculaTempoAcomodacao_Cascata(setpoint_ME, altura_tanque1, t, 1)
-				if(flag_controle==2):
+				if(tipo_controle==2):
 					altura_tanque1 = float(getAltura(0))
 					altura_tanque2 = float(getAltura(1))
 					saida = controlePID_K(set_point, altura_tanque2, Kp, Kd, Ki)
@@ -699,6 +737,13 @@ class Controle(threading.Thread):
 					calculaTempoSubida(set_point, altura, t)
 					calculaTempoAcomodacao(set_point, altura, t)
 					observadorCalculo(altura_tanque1, altura_tanque2, saida)
+				if(tipo_controle==3):
+					altura_tanque1 = float(getAltura(0))
+					altura_tanque2 = float(getAltura(1))
+					saida = seguidorCalculo(altura_tanque1, altura_tanque2, set_point)
+					calculaOvershoot(set_point, altura)
+					calculaTempoSubida(set_point, altura, t)
+					calculaTempoAcomodacao(set_point, altura, t)
 			print "Tensao: ", tensao
 			tensao = writeTensao(0, saida)
 			print "Write tensao saida: ", saida
@@ -709,8 +754,6 @@ class Controle(threading.Thread):
 			x_axis_range = float(t)  # atualiza o range do grafico
 			atualizaListas(t, saida, tensao, altura_tanque1, altura_tanque2, set_point, nivel_tanque1_estimado, nivel_tanque2_estimado) #atualiza os valores plotados
 			atualizaTempos(t)
-			print nivel_tanque1_estimado
-			print nivel_tanque2_estimado
 
 		endConnection(channel)
 		sys.exit()
@@ -749,16 +792,16 @@ class Interface(BoxLayout):
 	##CONTROLE
 	def CD(self):
 		print("Clicou CD")
-		global flag_controle
-		flag_controle = 0
+		setTipoControle(0)
 	def CC(self):
 		print("Clicou CC")
-		global flag_controle
-		flag_controle = 1
+		setTipoControle(1)
 	def Obs(self):
 		print("Clicou Obs")
-		global flag_controle
-		flag_controle = 2
+		setTipoControle(2)
+	def Seguidor(self):
+		print("Clicou Seguidor")
+		setTipoControle(3)
 
 	##ONDAS
 	def degrau(self):
@@ -905,7 +948,7 @@ class Interface(BoxLayout):
 	##ATUALIZAR VALORES
 	def atualiza(self):
 		global tensao_min, tensao_max, offset, valor_entrada, periodo, p1, p2
-		global Kp, Ki, Kd, taui, taud
+		global Kp, Ki, Kd, taui, taud, tipo_controle
 		global T1_Kp, T1_Ki, T1_Kd, T1_taui, T1_taud, T2_Kp, T2_Ki, T2_Kd, T2_taui, T2_taud
 		global flag, flag_subida, flag_acomodacao, flag_overshoot, flag_mudou_setPoint, antigo_setPoint, flag_verifica_overshoot
 		global tempo_subida, tempo_acomodacao, overshootPercentual
@@ -913,6 +956,7 @@ class Interface(BoxLayout):
 		global T1_tempo_subida, T1_tempo_acomodacao, T1_overshootPercentual
 		global T2_flag, T2_flag_subida, T2_flag_acomodacao, T2_flag_overshoot, T2_flag_mudou_setPoint, T2_antigo_setPoint, T2_flag_verifica_overshoot
 		global T2_tempo_subida, T2_tempo_acomodacao, T2_overshootPercentual
+		global ps1, ps2, ps3, Kc, L
 		if((valor_entrada!=float(self.ids.tensaoentrada.text)) or (offset!=float(self.ids.offset.text))):
 			##Controle direto
 			flag = True
@@ -949,6 +993,9 @@ class Interface(BoxLayout):
 			T2_overshootPercentual = 0.0
 			p1 = Complex.Complex(float(self.ids.polo1_real.text), float(self.ids.polo1_img.text))
 			p2 = Complex.Complex(float(self.ids.polo2_real.text), float(self.ids.polo2_img.text))
+			ps1 = Complex.Complex(float(self.ids.polo1_seguidor_real.text), float(self.ids.polo1_seguidor_img.text))
+			ps2 = Complex.Complex(float(self.ids.polo2_seguidor_real.text), float(self.ids.polo2_seguidor_img.text))
+			ps3 = Complex.Complex(float(self.ids.polo3_seguidor_real.text), float(self.ids.polo3_seguidor_img.text))
 		tensao_min = float(self.ids.tensaomin.text)
 		tensao_max = float(self.ids.tensaomax.text)
 		offset = float(self.ids.offset.text)
@@ -960,7 +1007,12 @@ class Interface(BoxLayout):
 		##        print "entrada: ", valor_entrada
 		##        print "periodo: ", periodo
 		##ATE AQUI OK
-		Kp = float(self.ids.kp.text)
+		if(tipo_controle==0):
+			Kp = float(self.ids.kp_CD.text)
+		elif(tipo_controle==2):
+			Kp = float(self.ids.kp_obs.text)
+		elif(tipo_controle==3):
+			Kp = float(self.ids.kp_seg.text)
 		Kd = float(self.ids.kd.text)
 		Ki = float(self.ids.ki.text)
 		taui = float(self.ids.taui.text)
@@ -978,6 +1030,11 @@ class Interface(BoxLayout):
 		self.ids.overshoot.text = "-"
 		self.ids.tempo_subida.text = "-"
 		self.ids.tempo_acomodacao.text = "-"
+		self.ids.ganho1.text = "-"
+		self.ids.ganho2.text = "-"
+		self.ids.ganho1_seguidor.text = "-"
+		self.ids.ganho2_seguidor.text = "-"
+		self.ids.ganho3_seguidor.text = "-"
 
 		if (self.ids.kd_label.state == 'down'):
 			self.kd_in()
@@ -1267,6 +1324,7 @@ class Interface(BoxLayout):
 		global overshoot, overshootPercentual, tempo_subida, tempo_acomodacao
 		global T1_overshoot, T1_overshootPercentual, T1_tempo_subida, T1_tempo_acomodacao
 		global T2_overshoot, T2_overshootPercentual, T2_tempo_subida, T2_tempo_acomodacao
+		global Kc,L
 
 		overshootPercentual = round(overshootPercentual, 2)
 		self.ids.overshoot.text = str(overshootPercentual)
@@ -1282,6 +1340,12 @@ class Interface(BoxLayout):
 		self.ids.T2_overshoot.text = str(T2_overshootPercentual)
 		self.ids.T2_tempo_subida.text = str(round(T2_tempo_subida, 3))
 		self.ids.T2_tempo_acomodacao.text = str(round(T2_tempo_acomodacao, 3))
+
+		self.ids.ganho1.text = L[0][0]
+		self.ids.ganho2.text = L[1][0]
+		self.ids.ganho1_seguidor.text = Kc[0][0]
+		self.ids.ganho2_seguidor.text = Kc[0][1]
+		self.ids.ganho3_seguidor.text = Kc[0][2]
 
 
 	def update_nivel(self, *args):
@@ -1391,6 +1455,25 @@ class Interface(BoxLayout):
 		T2_tempo_acomodacao_inicial = 0.0
 		T2_tempo_final = 0.0
 		T2_tempo_inicial = 0.0
+		##Observador e Seguidor
+		XEanterior = np.array([[0.0, 0.0], [0.0, 0.0]])
+		YEanterior = np.array([[0.0, 0.0]])
+		nivel_tanque1_estimado = 0.0
+		nivel_tanque2_estimado = 0.0
+		p1 = Complex.Complex(0.0, 0.0)
+		p2 = Complex.Complex(0.0, 0.0)
+		YE = np.array([[0.0, 0.0]])
+		Y = np.array([[0.0, 0.0]])
+		N = np.array([0.0, 0.0, 1.0])
+		K = np.array([0.0, 0.0, 0.0])
+		ps1 = Complex.Complex(0.9048, 0.0)
+		ps2 = Complex.Complex(0.9920, 0.0)
+		ps3 = Complex.Complex(0.9980, 0.0)
+		M = np.array([[0.0, 1.0]]).transpose()
+		L = np.array([[0.0, 0.0]]).transpose()
+		Kc = np.array([0.0, 0.0, 0.0])
+		v = 0.0
+		u = 0.0
 
 
 	##-----------------------------------------------------------------------------
